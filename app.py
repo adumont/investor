@@ -4,6 +4,7 @@ import pandas as pd
 import json
 from dotenv import load_dotenv
 from os import getenv
+import datetime
 
 load_dotenv()
 
@@ -258,20 +259,25 @@ with cols[3]:
         "Selecciona una zona geográfica", options=list(ZONAS.keys())
     )
 
+year = datetime.date.today().year
 
 query = f"""
     SELECT 
         codigoIsin,
         nombre,
-        indicadorRiesgo,
-        ter,
-        ytd, yearUno, yearTres, yearCinco,
+        indicadorRiesgo as Risk,
+        ter as TER,
+        ytd as "{ year }", --, yearUno, yearTres, yearCinco,
+        rentabilidadPasadaUno as "{ year - 1 }",
+        rentabilidadPasadaDos as "{ year - 2 }",
+        rentabilidadPasadaTres as "{ year - 3 }",
+        rentabilidadPasadaCuatro as "{ year - 4 }",
+        rentabilidadPasadaCinco as "{ year - 5 }",
         diasDesplazamientoSuscripcion DiasS, diasDesplazamientoReembolso DiasR,
         entidadGestora as Gestora,
         divisasDto.codigo AS divisa,
         -- zonaGeografica,
         -- tipoProductoEnum
-        horaLimiteSuscripcionMismoDia HoraLimite
     FROM df_productos
     WHERE
         ( codigoIsin ILIKE '%{filter_name}%' -- filtro por ISIN
@@ -444,6 +450,9 @@ def render_general_info(producto):
         ("Entidad depositaria", format_text(datos_fondo.get("entidadDepositaria"))),
         ("Entidad promotora", format_text(datos_fondo.get("entidadPromotora"))),
         ("FP adscrito", format_text(datos_fondo.get("fpAdscrito"))),
+        ("Días desplazamiento suscripción", format_text(producto.get("diasDesplazamientoSuscripcion"))),
+        ("Días desplazamiento reembolso", format_text(producto.get("diasDesplazamientoReembolso"))),
+        ("Hora límite suscripción mismo día", format_text(producto.get("horaLimiteSuscripcionMismoDia"))),
     ]
 
     st.subheader("Datos generales")
