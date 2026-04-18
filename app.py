@@ -170,6 +170,8 @@ st.set_page_config(
 
 CACHE_TTL = 6 * 60 * 60  # 6 horas
 
+if "threshold_sector_saved" not in st.session_state:
+    st.session_state.threshold_sector_saved = 20
 
 @st.cache_data(show_spinner="Descargando datos...", ttl=CACHE_TTL)
 def download_json_from_url(url):
@@ -207,7 +209,7 @@ df_productos = pd.DataFrame(productos_lista)
 #     ORDER BY indicadorRiesgo ASC, nombre ASC, sector_porcentaje DESC
 # """
 
-CATEGORIAS = {
+FILTRO = {
     "Cualquiera": "1=1",
     "Emergentes": "tipoActivo = 'Renta Variable' and zonaGeografica = 'Mercados Emergentes' and tipoProductoEnum = 'FONDOS_INDEXADOS'",
     "World": """(nombre ilike '%world%' or nombre ilike '%global%' ) AND tipoActivo = 'Renta Variable' and zonaGeografica = 'Global' and tipoProductoEnum = 'FONDOS_INDEXADOS'""",
@@ -233,6 +235,7 @@ for tipo in df_productos["tipoProductoEnum"].unique():
     TIPOS_PRODUCTO[tipo] = f"tipoProductoEnum = '{tipo}'"
 
 
+
 cols = st.columns(2)
 with cols[0]:
     st.title("Productos de Inversión en MyInvestor")
@@ -244,7 +247,7 @@ with cols[1]:
 cols = st.columns(4)
 with cols[0]:
     selected_filter = st.selectbox(
-        "Selecciona una categoría", options=list(CATEGORIAS.keys())
+        "Selecciona un filtro", options=list(FILTRO.keys())
     )
 with cols[1]:
     selected_divisa = st.selectbox(
@@ -259,37 +262,96 @@ with cols[3]:
         "Selecciona una zona geográfica", options=list(ZONAS.keys())
     )
 
+CATEGORIAS = {"Cualquiera": "1=1"}
+for categoria in df_productos["categoria"].unique():
+    CATEGORIAS[categoria] = f"categoria = '{categoria}'"
+
+CATEGORIAS_MYINVESTOR = {"Cualquiera": "1=1"}
+for categoria in df_productos["categoriaMyInvestor"].unique():
+    CATEGORIAS_MYINVESTOR[categoria] = f"categoriaMyInvestor = '{categoria}'"
+
+CATEGORIAS_MSTAR = {"Cualquiera": "1=1"}
+for categoria in df_productos["categoriaMstar"].unique():
+    CATEGORIAS_MSTAR[categoria] = f"categoriaMstar = '{categoria}'"
+
+cols = st.columns(3)
+with cols[0]:
+    selected_categoria = st.selectbox(
+        "Selecciona una categoría", options=list(CATEGORIAS.keys())
+    )
+with cols[1]:
+    selected_categoria_myinvestor = st.selectbox(
+        "Selecciona una categoría MyInvestor", options=list(CATEGORIAS_MYINVESTOR.keys())
+    )
+with cols[2]:
+    selected_categoria_mstar = st.selectbox(
+        "Selecciona una categoría Morningstar", options=list(CATEGORIAS_MSTAR.keys())
+    )
+
+SECTORES = {"Cualquiera": "1=1"}
+selected_sector = "Cualquiera"
+# query_sectores_unicos = """
+# SELECT DISTINCT
+#     sector.nombre AS nombre_sector
+# FROM 
+#     df_productos,
+#     UNNEST(listaSectores) AS t(sector)
+# ORDER BY 
+#     nombre_sector
+# """
+# df_sectores_unicos = duckdb.query(query_sectores_unicos).df()
+# cols = st.columns(2)
+
+# def update_threshold_sector():
+#     st.session_state.threshold_sector_saved = st.session_state.get("threshold_sector", 20)
+#     st.rerun()
+
+# with cols[0]:
+#     SECTORES = {"Cualquiera": "1=1"}
+#     # we want to filter products that have a sector with name = sector, but listaSectores is a list of objects with field "nombre", so we need to use EXISTS with UNNEST
+#     # we also want to have s.sector.porcent above 20%
+#     for sector in df_sectores_unicos["nombre_sector"]:
+#         SECTORES[sector] = f"list_any_value(list_transform(list_filter(listaSectores, x -> x.nombre = '{sector}'),x -> x.porcent > {st.session_state.threshold_sector_saved})) = true"
+
+#     selected_sector = st.selectbox(
+#         "Selecciona un sector", options=list(SECTORES.keys())
+#     )
+# with cols[1]:
+#     st.slider("Porcentaje mínimo en sector seleccionado", min_value=0, max_value=100, value=20, step=1, on_change=update_threshold_sector)
+
 year = datetime.date.today().year
 
 query = f"""
-    SELECT 
-        codigoIsin,
-        nombre,
-        indicadorRiesgo as Risk,
-        ter as TER,
-        ytd as "{ year }", --, yearUno, yearTres, yearCinco,
-        rentabilidadPasadaUno as "{ year - 1 }",
-        rentabilidadPasadaDos as "{ year - 2 }",
-        rentabilidadPasadaTres as "{ year - 3 }",
-        rentabilidadPasadaCuatro as "{ year - 4 }",
-        rentabilidadPasadaCinco as "{ year - 5 }",
-        diasDesplazamientoSuscripcion DiasS, diasDesplazamientoReembolso DiasR,
-        entidadGestora as Gestora,
-        divisasDto.codigo AS divisa,
-        -- zonaGeografica,
-        -- tipoProductoEnum
-    FROM df_productos
-    WHERE
-        ( codigoIsin ILIKE '%{filter_name}%' -- filtro por ISIN
-        OR
-        nombre ILIKE '%{filter_name}%' -- filtro por nombre
-        )
-        AND {CATEGORIAS[selected_filter]} -- filtro categoría 
-        AND {DIVISAS[selected_divisa]} -- filtro divisa
-        AND {ZONAS[selected_zona]} -- filtro zona geográfica
-        AND {TIPOS_PRODUCTO[selected_producto]} -- filtro tipo de producto
-        AND status = 'OPEN'
-    ORDER BY indicadorRiesgo ASC, ter ASC
+SELECT 
+    codigoIsin,
+    nombre,
+    indicadorRiesgo as Risk,
+    ter as TER,
+    ytd as "{ year }", --, yearUno, yearTres, yearCinco,
+    rentabilidadPasadaUno as "{ year - 1 }",
+    rentabilidadPasadaDos as "{ year - 2 }",
+    rentabilidadPasadaTres as "{ year - 3 }",
+    rentabilidadPasadaCuatro as "{ year - 4 }",
+    rentabilidadPasadaCinco as "{ year - 5 }",
+    diasDesplazamientoSuscripcion DiasS, diasDesplazamientoReembolso DiasR,
+    entidadGestora as Gestora,
+    divisasDto.codigo AS divisa,
+    -- zonaGeografica,
+    -- tipoProductoEnum
+FROM df_productos
+WHERE
+    ( codigoIsin ILIKE '%{filter_name}%' OR -- filtro por ISIN
+        nombre ILIKE '%{filter_name}%' ) -- filtro por nombre
+    AND {FILTRO[selected_filter]} -- filtro 
+    AND {DIVISAS[selected_divisa]} -- filtro divisa
+    AND {ZONAS[selected_zona]} -- filtro zona geográfica
+    AND {TIPOS_PRODUCTO[selected_producto]} -- filtro tipo de producto
+    AND {CATEGORIAS[selected_categoria]} -- filtro categoría
+    AND {CATEGORIAS_MSTAR[selected_categoria_mstar]} -- filtro categoría Morningstar
+    AND {CATEGORIAS_MYINVESTOR[selected_categoria_myinvestor]} -- filtro categoría MyInvestor
+    AND {SECTORES[selected_sector]} -- filtro sector
+    AND status = 'OPEN'
+ORDER BY indicadorRiesgo ASC, ter ASC
 """
 
 # query=f"""
@@ -306,10 +368,10 @@ query = f"""
 # ORDER BY indicadorRiesgo ASC, df_productos.nombre ASC;
 # """
 
-df = duckdb.query(query).df()
 with st.expander("Consulta SQL"):
     st.code(query)
 
+df = duckdb.query(query).df()
 tabla = st.dataframe(
     df,
     # height=800,
@@ -441,6 +503,7 @@ def render_general_info(producto):
 
 
     detalles = [
+        ("Categoría", format_text(producto.get("categoria"))),
         ("Categoría MyInvestor", format_text(producto.get("categoriaMyInvestor"))),
         ("Categoría Morningstar", format_text(producto.get("categoriaMstar"))),
         ("Zona geográfica", format_text(producto.get("zonaGeografica"))),
