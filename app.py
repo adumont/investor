@@ -331,27 +331,28 @@ def to_float(value):
         return 0.0
 
 
-@st.cache_data(show_spinner=False, ttl=CACHE_TTL)
-def get_comisiones_markdown(producto):
+def render_comisiones(producto):
     if not producto or "listaComisiones" not in producto:
         return "No hay información de comisiones disponible."
     comisiones = producto["listaComisiones"]
     comisiones = sorted(
         comisiones, key=lambda x: to_float(x["porcentaje"]), reverse=True
     )
-    comisiones_md = "### Comisiones (TER: {:.2f}%)\n\n".format(producto.get("ter", 0))
-    comisiones_md += "| Comisión | Porcentaje |\n|---|---|\n"
+    st.subheader("Comisiones")
+    comisiones_md = "| Comisión | Porcentaje |\n|---|---|\n"
+    if producto.get("ter") is not None:
+        comisiones_md += f"| **Total Expense Ratio (TER)** | **{producto['ter']}%** |\n"
     for com in comisiones:
         comisiones_md += f"| {com['nombre']} | {com['porcentaje']}% |\n"
-    return comisiones_md
+    st.markdown(comisiones_md)
 
 
-def render_sectores_markdown(producto):
+def render_sectores(producto):
     if not producto or "listaSectores" not in producto:
         return "No hay información de sectores disponible."
     sectores = producto["listaSectores"]
-    if not sectores:
-        st.write("No hay información de sectores disponible.")
+    if not sectores or len(sectores) == 0:
+        return
     
     sectores = sorted(sectores, key=lambda x: float(x["porcent"]), reverse=True)
     st.subheader("Sectores")
@@ -390,7 +391,14 @@ def has_value(value):
 
 
 def render_general_info(producto):
-    st.subheader("General")
+    datos_fondo = producto.get("datosFondo") or {}
+
+    with st.container(vertical_alignment="center", horizontal=True):
+        st.subheader(f"{producto.get('nombre', 'Producto')} ({producto.get('codigoIsin', 'ISIN N/D')})")
+        st.metric("Tipo de activo", format_text(producto.get("tipoActivo")),)
+        st.metric(
+            "Indicador de riesgo", format_text(datos_fondo.get("indicadorRiesgo"))
+        )
 
     descripcion = producto.get("descripcion")
     if has_value(descripcion):
@@ -408,14 +416,14 @@ def render_general_info(producto):
         ("Informe semestral", producto.get("urlInformeSemestral")),
         ("Memoria", producto.get("urlMemoria")),
         ("KIID", producto.get("urlKiid")),
-        # (
-        #     "Morningstar",
-        #     (
-        #         f"https://www.morningstar.es/es/funds/snapshot/snapshot.aspx?id={producto.get('idFondoMorningstar')}"
-        #         if producto.get("idFondoMorningstar")
-        #         else None
-        #     ),
-        # ),
+        (
+            "Morningstar",
+            (
+                f"https://www.morningstar.es/es/funds/snapshot/snapshot.aspx?id={producto.get('secIdFondoMorningstar')}"
+                if producto.get("secIdFondoMorningstar")
+                else None
+            ),
+        ),
     ]
 
     shown_links = [(label, url) for label, url in links if has_value(url)]
@@ -426,16 +434,9 @@ def render_general_info(producto):
         )
 
 
-def render_datos_fondo(producto):
-    datos_fondo = producto.get("datosFondo") or {}
-
-    with st.container(vertical_alignment="center", horizontal=True):
-        st.metric("Tipo de activo", format_text(producto.get("tipoActivo")),)
-        st.metric(
-            "Indicador de riesgo", format_text(datos_fondo.get("indicadorRiesgo"))
-        )
-
     detalles = [
+        ("Categoría MyInvestor", format_text(producto.get("categoriaMyInvestor"))),
+        ("Categoría Morningstar", format_text(producto.get("categoriaMstar"))),
         ("Zona geográfica", format_text(producto.get("zonaGeografica"))),
         ("Tipo de producto", format_text(producto.get("tipoProductoEnum"))),
         ("Perfil del plan", format_text(datos_fondo.get("tipoPerfilPlanEnum"))),
@@ -445,6 +446,7 @@ def render_datos_fondo(producto):
         ("FP adscrito", format_text(datos_fondo.get("fpAdscrito"))),
     ]
 
+    st.subheader("Datos generales")
     detalles_md = "| Campo | Valor |\n|---|---|\n"
     detalles_md += "\n".join(f"| {campo} | {valor} |" for campo, valor in detalles if has_value(valor) and valor != "N/D")
     st.markdown(detalles_md)
@@ -458,12 +460,11 @@ if selected_rows:
     else:
         nombre_producto = producto["nombre"]
 
-        with st.expander(f"{nombre_producto} ({selected_isin})", expanded=True):
+        with st.expander(f"Información del producto", expanded=True):
             render_general_info(producto)
-            render_datos_fondo(producto)
-            st.markdown(get_comisiones_markdown(producto))
-            render_sectores_markdown(producto)
-            st.caption("Detalle completo del producto:")
-            st.json(producto, expanded=False)
+            render_comisiones(producto)
+            render_sectores(producto)
+            with st.expander("Detalle completo del producto", expanded=False):
+                st.json(producto)
 else:
     st.write("Selecciona un producto para ver sus detalles.")
