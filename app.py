@@ -163,7 +163,7 @@ load_dotenv()
 # },
 
 
-st.set_page_config(page_title="Investor", layout="wide", page_icon=":material/explore:")
+st.set_page_config(page_title="Investor", layout="wide", page_icon=":material/finance_mode:")
 
 @st.cache_data(show_spinner="Descargando datos...", ttl=6*60*60)
 def download_json_from_url(url):
