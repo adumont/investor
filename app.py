@@ -163,9 +163,14 @@ load_dotenv()
 # },
 
 
-st.set_page_config(page_title="Investor", layout="wide", page_icon=":material/finance_mode:")
+st.set_page_config(
+    page_title="Investor", layout="wide", page_icon=":material/finance_mode:"
+)
 
-@st.cache_data(show_spinner="Descargando datos...", ttl=6*60*60)
+CACHE_TTL = 6 * 60 * 60  # 6 horas
+
+
+@st.cache_data(show_spinner="Descargando datos...", ttl=CACHE_TTL)
 def download_json_from_url(url):
     import requests
 
@@ -174,10 +179,12 @@ def download_json_from_url(url):
 
     return response.json()
 
-@st.cache_data(show_spinner="Descargando datos...", ttl=6*60*60)
+
+@st.cache_data(show_spinner="Descargando datos...", ttl=CACHE_TTL)
 def read_json_from_file(filename):
     with open(filename, "r", encoding="utf-8") as f:
         return json.load(f)
+
 
 # productos_lista = download_json_from_url(getenv("PRODUCT_JSON_URL"))
 productos_lista = read_json_from_file("myinvestor.json")
@@ -201,27 +208,27 @@ df_productos = pd.DataFrame(productos_lista)
 
 CATEGORIAS = {
     "Cualquiera": "1=1",
-    "Emergentes": "tipoActivo = 'Renta Variable' and zonaGeografica = 'Mercados Emergentes' and divisasDto.codigo = 'EUR' and tipoProductoEnum = 'FONDOS_INDEXADOS'",
-    "World": """(nombre ilike '%world%' or nombre ilike '%global%' ) AND tipoActivo = 'Renta Variable' and zonaGeografica = 'Global' and divisasDto.codigo = 'EUR' and tipoProductoEnum = 'FONDOS_INDEXADOS'""",
-    "Oro y Metales": "categoriaMstar = 'RV Sector Oro y Metales preciosos'"
+    "Emergentes": "tipoActivo = 'Renta Variable' and zonaGeografica = 'Mercados Emergentes' and tipoProductoEnum = 'FONDOS_INDEXADOS'",
+    "World": """(nombre ilike '%world%' or nombre ilike '%global%' ) AND tipoActivo = 'Renta Variable' and zonaGeografica = 'Global' and tipoProductoEnum = 'FONDOS_INDEXADOS'""",
+    "Oro y Metales": "categoriaMstar = 'RV Sector Oro y Metales preciosos'",
 }
 
 
 # get list of divisas from df_productos
-divisas_list = df_productos['divisasDto'].apply(lambda x: x['codigo']).unique()
+divisas_list = df_productos["divisasDto"].apply(lambda x: x["codigo"]).unique()
 
-DIVISAS = { "Cualquiera": "1=1"}
-for divisa in df_productos['divisasDto'].apply(lambda x: x['codigo']).unique():
+DIVISAS = {"Cualquiera": "1=1"}
+for divisa in df_productos["divisasDto"].apply(lambda x: x["codigo"]).unique():
     DIVISAS[divisa] = f"divisasDto.codigo = '{divisa}'"
 
-#Filtro de zona geográfica
-ZONAS = { "Cualquiera": "1=1"}
-for zona in df_productos['zonaGeografica'].unique():
+# Filtro de zona geográfica
+ZONAS = {"Cualquiera": "1=1"}
+for zona in df_productos["zonaGeografica"].unique():
     ZONAS[zona] = f"zonaGeografica = '{zona}'"
 
 # Filtro Tipo de producto
-TIPOS_PRODUCTO = { "Cualquiera": "1=1"}
-for tipo in df_productos['tipoProductoEnum'].unique():
+TIPOS_PRODUCTO = {"Cualquiera": "1=1"}
+for tipo in df_productos["tipoProductoEnum"].unique():
     TIPOS_PRODUCTO[tipo] = f"tipoProductoEnum = '{tipo}'"
 
 
@@ -229,17 +236,27 @@ cols = st.columns(2)
 with cols[0]:
     st.title("Productos de Inversión en MyInvestor")
 with cols[1]:
-    filter_name = st.text_input("Filtrar por nombre (SQL ILIKE)", value="", placeholder="Ejemplo: 'world'")
+    filter_name = st.text_input(
+        "Filtrar por nombre or por ISIN (SQL ILIKE)", value="", placeholder="Ejemplo: 'world', 'FR0000978371'..."
+    )
 
 cols = st.columns(4)
 with cols[0]:
-    selected_filter = st.selectbox("Selecciona una categoría", options=list(CATEGORIAS.keys()))
+    selected_filter = st.selectbox(
+        "Selecciona una categoría", options=list(CATEGORIAS.keys())
+    )
 with cols[1]:
-    selected_divisa = st.selectbox("Selecciona una divisa", options=list(DIVISAS.keys()))
+    selected_divisa = st.selectbox(
+        "Selecciona una divisa", options=list(DIVISAS.keys())
+    )
 with cols[2]:
-    selected_producto = st.selectbox("Selecciona un tipo de producto", options=list(TIPOS_PRODUCTO.keys()))
+    selected_producto = st.selectbox(
+        "Selecciona un tipo de producto", options=list(TIPOS_PRODUCTO.keys())
+    )
 with cols[3]:
-    selected_zona = st.selectbox("Selecciona una zona geográfica", options=list(ZONAS.keys()))
+    selected_zona = st.selectbox(
+        "Selecciona una zona geográfica", options=list(ZONAS.keys())
+    )
 
 
 query = f"""
@@ -257,7 +274,10 @@ query = f"""
         horaLimiteSuscripcionMismoDia HoraLimite
     FROM df_productos
     WHERE
+        ( codigoIsin ILIKE '%{filter_name}%' -- filtro por ISIN
+        OR
         nombre ILIKE '%{filter_name}%' -- filtro por nombre
+        )
         AND {CATEGORIAS[selected_filter]} -- filtro categoría 
         AND {DIVISAS[selected_divisa]} -- filtro divisa
         AND {ZONAS[selected_zona]} -- filtro zona geográfica
@@ -284,4 +304,166 @@ df = duckdb.query(query).df()
 with st.expander("Consulta SQL"):
     st.code(query)
 
-tabla = st.dataframe(df, height=800)
+tabla = st.dataframe(
+    df,
+    # height=800,
+    use_container_width=True,
+    hide_index=True,
+    on_select="rerun",
+    selection_mode="single-row",
+)
+
+selected_rows = tabla.get("selection", {}).get("rows", [])
+
+
+@st.cache_data(show_spinner=False, ttl=CACHE_TTL)
+def get_producto_by_isin(isin):
+    return next((p for p in productos_lista if p["codigoIsin"] == isin), None)
+
+
+def to_float(value):
+    # remove % if exists and convert to float
+    if isinstance(value, str) and value.endswith("%"):
+        value = value[:-1]
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return 0.0
+
+
+@st.cache_data(show_spinner=False, ttl=CACHE_TTL)
+def get_comisiones_markdown(producto):
+    if not producto or "listaComisiones" not in producto:
+        return "No hay información de comisiones disponible."
+    comisiones = producto["listaComisiones"]
+    comisiones = sorted(
+        comisiones, key=lambda x: to_float(x["porcentaje"]), reverse=True
+    )
+    comisiones_md = "### Comisiones (TER: {:.2f}%)\n\n".format(producto.get("ter", 0))
+    comisiones_md += "| Comisión | Porcentaje |\n|---|---|\n"
+    for com in comisiones:
+        comisiones_md += f"| {com['nombre']} | {com['porcentaje']}% |\n"
+    return comisiones_md
+
+
+def render_sectores_markdown(producto):
+    if not producto or "listaSectores" not in producto:
+        return "No hay información de sectores disponible."
+    sectores = producto["listaSectores"]
+    if not sectores:
+        st.write("No hay información de sectores disponible.")
+    
+    sectores = sorted(sectores, key=lambda x: float(x["porcent"]), reverse=True)
+    st.subheader("Sectores")
+    sectores_md = "| Sector | Porcentaje |\n|---|---|\n"
+    for sec in sectores:
+        sectores_md += f"| {sec['nombre']} | {sec['porcent']} |\n"
+    st.markdown(sectores_md)
+
+
+def get_general_info_markdown(producto):
+    if not producto:
+        return "No hay información disponible."
+
+
+def format_bool(value):
+    if value is True:
+        return "Si"
+    if value is False:
+        return "No"
+    return "N/D"
+
+
+def format_text(value):
+    if value is None or value == "":
+        return "N/D"
+    return str(value)
+
+
+def has_value(value):
+    if value is None:
+        return False
+    if isinstance(value, str):
+        cleaned = value.strip()
+        return cleaned not in {"", "."}
+    return True
+
+
+def render_general_info(producto):
+    st.subheader("General")
+
+    descripcion = producto.get("descripcion")
+    if has_value(descripcion):
+        st.write(descripcion)
+
+    datos_fondo = producto.get("datosFondo") or {}
+
+    links = [
+        (
+            "Ficha tecnica",
+            producto.get("urlFichaTecnica")
+            or datos_fondo.get("urlFichaTecnica"),
+        ),
+        ("Datos fundamentales", producto.get("urlDatosFundamentales") or datos_fondo.get("urlDatosFundamentales")),
+        ("Informe semestral", producto.get("urlInformeSemestral")),
+        ("Memoria", producto.get("urlMemoria")),
+        ("KIID", producto.get("urlKiid")),
+        # (
+        #     "Morningstar",
+        #     (
+        #         f"https://www.morningstar.es/es/funds/snapshot/snapshot.aspx?id={producto.get('idFondoMorningstar')}"
+        #         if producto.get("idFondoMorningstar")
+        #         else None
+        #     ),
+        # ),
+    ]
+
+    shown_links = [(label, url) for label, url in links if has_value(url)]
+    if shown_links:
+        st.markdown(
+            ":material/link: Links: "
+            + ", ".join(f"[{label}]({url})" for label, url in shown_links)
+        )
+
+
+def render_datos_fondo(producto):
+    datos_fondo = producto.get("datosFondo") or {}
+
+    with st.container(vertical_alignment="center", horizontal=True):
+        st.metric("Tipo de activo", format_text(producto.get("tipoActivo")),)
+        st.metric(
+            "Indicador de riesgo", format_text(datos_fondo.get("indicadorRiesgo"))
+        )
+
+    detalles = [
+        ("Zona geográfica", format_text(producto.get("zonaGeografica"))),
+        ("Tipo de producto", format_text(producto.get("tipoProductoEnum"))),
+        ("Perfil del plan", format_text(datos_fondo.get("tipoPerfilPlanEnum"))),
+        ("Entidad gestora", format_text(datos_fondo.get("entidadGestora"))),
+        ("Entidad depositaria", format_text(datos_fondo.get("entidadDepositaria"))),
+        ("Entidad promotora", format_text(datos_fondo.get("entidadPromotora"))),
+        ("FP adscrito", format_text(datos_fondo.get("fpAdscrito"))),
+    ]
+
+    detalles_md = "| Campo | Valor |\n|---|---|\n"
+    detalles_md += "\n".join(f"| {campo} | {valor} |" for campo, valor in detalles if has_value(valor) and valor != "N/D")
+    st.markdown(detalles_md)
+
+
+if selected_rows:
+    selected_isin = df.iloc[selected_rows[0]]["codigoIsin"]
+    producto = get_producto_by_isin(selected_isin)
+    if not producto:
+        st.warning("No se encontraron los detalles del producto seleccionado.")
+    else:
+        nombre_producto = producto["nombre"]
+
+        with st.expander(f"{nombre_producto} ({selected_isin})", expanded=True):
+            render_general_info(producto)
+            render_datos_fondo(producto)
+            st.markdown(get_comisiones_markdown(producto))
+            render_sectores_markdown(producto)
+            st.caption("Detalle completo del producto:")
+            st.json(producto, expanded=False)
+else:
+    st.write("Selecciona un producto para ver sus detalles.")
