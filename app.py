@@ -501,6 +501,8 @@ def render_general_info(producto):
             + ", ".join(f"[{label}]({url})" for label, url in shown_links)
         )
 
+def render_general_info_tabla(producto):
+    datos_fondo = producto.get("datosFondo") or {}
 
     detalles = [
         ("Categoría", format_text(producto.get("categoria"))),
@@ -534,9 +536,26 @@ if selected_rows:
 
         with st.expander(f"Información del producto", expanded=True):
             render_general_info(producto)
-            render_comisiones(producto)
+            cols = st.columns(2)
+            with cols[0]:
+                render_general_info_tabla(producto)
+            with cols[1]:
+                render_comisiones(producto)
             render_sectores(producto)
             with st.expander("Detalle completo del producto", expanded=False):
                 st.json(producto)
+
+        # with st.expander(f"Información del producto", expanded=True):
+        #     render_general_info(producto)
+        #     with st.container(horizontal=True):
+        #         with st.container():
+        #             render_general_info_tabla(producto)
+        #         with st.container():
+        #             render_comisiones(producto)
+        #         with st.container():
+        #             render_sectores(producto)
+        #     with st.expander("Detalle completo del producto", expanded=False):
+        #         st.json(producto)
+
 else:
     st.write("Selecciona un producto para ver sus detalles.")
