@@ -174,9 +174,13 @@ def download_json_from_url(url):
 
     return response.json()
 
+@st.cache_data(show_spinner="Descargando datos...", ttl=6*60*60)
+def read_json_from_file(filename):
+    with open(filename, "r", encoding="utf-8") as f:
+        return json.load(f)
+
 # productos_lista = download_json_from_url(getenv("PRODUCT_JSON_URL"))
-with open("myinvestor.json", "r", encoding="utf-8") as f:
-    productos_lista = json.load(f)
+productos_lista = read_json_from_file("myinvestor.json")
 
 # with st.expander("Productos JSON"):
 #     st.json(productos_lista[0])
