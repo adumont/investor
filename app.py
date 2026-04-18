@@ -263,8 +263,8 @@ year = datetime.date.today().year
 
 query = f"""
     SELECT 
-        codigoIsin as ISIN,
-        nombre as Nombre,
+        codigoIsin,
+        nombre,
         indicadorRiesgo as Risk,
         ter as TER,
         ytd as "{ year }", --, yearUno, yearTres, yearCinco,
