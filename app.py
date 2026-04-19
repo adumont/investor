@@ -468,11 +468,7 @@ def render_general_info(producto):
 
     with st.container(vertical_alignment="center", horizontal=True):
         st.subheader(
-            f"{producto.get('nombre', 'Producto')} ({producto.get('codigoIsin', 'ISIN N/D')})"
-        )
-        st.metric(
-            "Tipo de activo",
-            format_text(producto.get("tipoActivo")),
+            f"{producto.get('nombre', 'Producto')} :orange-badge[{producto.get('codigoIsin', 'ISIN N/D')}] :violet-badge[{producto.get('tipoActivo', 'N/A')}]"
         )
         st.metric(
             "Indicador de riesgo", format_text(datos_fondo.get("indicadorRiesgo"))
