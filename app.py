@@ -559,3 +559,6 @@ if selected_rows:
 
 else:
     st.write("Selecciona un producto para ver sus detalles.")
+
+# Disclaimer
+st.markdown("<small>:red-badge[:material/warning: Aviso] Rentabilidades pasadas no garantizan rentabilidades futuras. Invertir en fondos conlleva riesgo de pérdida de capital.</small>", unsafe_allow_html=True)
