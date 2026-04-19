@@ -2,6 +2,7 @@ import streamlit as st
 import duckdb
 import pandas as pd
 import json
+import altair as alt
 from dotenv import load_dotenv
 from os import getenv
 import datetime
@@ -173,6 +174,7 @@ CACHE_TTL = 6 * 60 * 60  # 6 horas
 if "threshold_sector_saved" not in st.session_state:
     st.session_state.threshold_sector_saved = 20
 
+
 @st.cache_data(show_spinner="Descargando datos...", ttl=CACHE_TTL)
 def download_json_from_url(url):
     import requests
@@ -235,20 +237,19 @@ for tipo in df_productos["tipoProductoEnum"].unique():
     TIPOS_PRODUCTO[tipo] = f"tipoProductoEnum = '{tipo}'"
 
 
-
 cols = st.columns(2)
 with cols[0]:
     st.title("Productos de Inversión en MyInvestor")
 with cols[1]:
     filter_name = st.text_input(
-        "Filtrar por nombre or por ISIN (SQL ILIKE)", value="", placeholder="Ejemplo: 'world', 'FR0000978371'..."
+        "Filtrar por nombre or por ISIN (SQL ILIKE)",
+        value="",
+        placeholder="Ejemplo: 'world', 'FR0000978371'...",
     )
 
 cols = st.columns(4)
 with cols[0]:
-    selected_filter = st.selectbox(
-        "Selecciona un filtro", options=list(FILTRO.keys())
-    )
+    selected_filter = st.selectbox("Selecciona un filtro", options=list(FILTRO.keys()))
 with cols[1]:
     selected_divisa = st.selectbox(
         "Selecciona una divisa", options=list(DIVISAS.keys())
@@ -281,7 +282,8 @@ with cols[0]:
     )
 with cols[1]:
     selected_categoria_myinvestor = st.selectbox(
-        "Selecciona una categoría MyInvestor", options=list(CATEGORIAS_MYINVESTOR.keys())
+        "Selecciona una categoría MyInvestor",
+        options=list(CATEGORIAS_MYINVESTOR.keys()),
     )
 with cols[2]:
     selected_categoria_mstar = st.selectbox(
@@ -293,10 +295,10 @@ selected_sector = "Cualquiera"
 # query_sectores_unicos = """
 # SELECT DISTINCT
 #     sector.nombre AS nombre_sector
-# FROM 
+# FROM
 #     df_productos,
 #     UNNEST(listaSectores) AS t(sector)
-# ORDER BY 
+# ORDER BY
 #     nombre_sector
 # """
 # df_sectores_unicos = duckdb.query(query_sectores_unicos).df()
@@ -421,7 +423,7 @@ def render_sectores(producto):
     sectores = producto["listaSectores"]
     if not sectores or len(sectores) == 0:
         return
-    
+
     sectores = sorted(sectores, key=lambda x: float(x["porcent"]), reverse=True)
     st.subheader("Sectores")
     sectores_md = "| Sector | Porcentaje |\n|---|---|\n"
@@ -462,8 +464,13 @@ def render_general_info(producto):
     datos_fondo = producto.get("datosFondo") or {}
 
     with st.container(vertical_alignment="center", horizontal=True):
-        st.subheader(f"{producto.get('nombre', 'Producto')} ({producto.get('codigoIsin', 'ISIN N/D')})")
-        st.metric("Tipo de activo", format_text(producto.get("tipoActivo")),)
+        st.subheader(
+            f"{producto.get('nombre', 'Producto')} ({producto.get('codigoIsin', 'ISIN N/D')})"
+        )
+        st.metric(
+            "Tipo de activo",
+            format_text(producto.get("tipoActivo")),
+        )
         st.metric(
             "Indicador de riesgo", format_text(datos_fondo.get("indicadorRiesgo"))
         )
@@ -477,10 +484,13 @@ def render_general_info(producto):
     links = [
         (
             "Ficha tecnica",
-            producto.get("urlFichaTecnica")
-            or datos_fondo.get("urlFichaTecnica"),
+            producto.get("urlFichaTecnica") or datos_fondo.get("urlFichaTecnica"),
         ),
-        ("Datos fundamentales", producto.get("urlDatosFundamentales") or datos_fondo.get("urlDatosFundamentales")),
+        (
+            "Datos fundamentales",
+            producto.get("urlDatosFundamentales")
+            or datos_fondo.get("urlDatosFundamentales"),
+        ),
         ("Informe semestral", producto.get("urlInformeSemestral")),
         ("Memoria", producto.get("urlMemoria")),
         ("KIID", producto.get("urlKiid")),
@@ -501,6 +511,7 @@ def render_general_info(producto):
             + ", ".join(f"[{label}]({url})" for label, url in shown_links)
         )
 
+
 def render_general_info_tabla(producto):
     datos_fondo = producto.get("datosFondo") or {}
 
@@ -515,15 +526,63 @@ def render_general_info_tabla(producto):
         ("Entidad depositaria", format_text(datos_fondo.get("entidadDepositaria"))),
         ("Entidad promotora", format_text(datos_fondo.get("entidadPromotora"))),
         ("FP adscrito", format_text(datos_fondo.get("fpAdscrito"))),
-        ("Días desplazamiento suscripción", format_text(producto.get("diasDesplazamientoSuscripcion"))),
-        ("Días desplazamiento reembolso", format_text(producto.get("diasDesplazamientoReembolso"))),
-        ("Hora límite suscripción mismo día", format_text(producto.get("horaLimiteSuscripcionMismoDia"))),
+        (
+            "Días desplazamiento suscripción",
+            format_text(producto.get("diasDesplazamientoSuscripcion")),
+        ),
+        (
+            "Días desplazamiento reembolso",
+            format_text(producto.get("diasDesplazamientoReembolso")),
+        ),
+        (
+            "Hora límite suscripción mismo día",
+            format_text(producto.get("horaLimiteSuscripcionMismoDia")),
+        ),
     ]
 
     st.subheader("Datos generales")
     detalles_md = "| Campo | Valor |\n|---|---|\n"
-    detalles_md += "\n".join(f"| {campo} | {valor} |" for campo, valor in detalles if has_value(valor) and valor != "N/D")
+    detalles_md += "\n".join(
+        f"| {campo} | {valor} |"
+        for campo, valor in detalles
+        if has_value(valor) and valor != "N/D"
+    )
     st.markdown(detalles_md)
+
+
+# render rentabilidad años pasados en un altair bar chart
+def render_rentabilidad(producto):
+    rentabilidades = []
+    for i, span in enumerate(
+        ["ytd"]
+        + [
+            "rentabilidadPasada" + suf
+            for suf in ["Uno", "Dos", "Tres", "Cuatro", "Cinco"]
+        ]
+    ):
+        value = producto.get(span)
+        if value is not None:
+            rentabilidades.append((year - i, value))
+    if rentabilidades:
+        df_rentabilidades = pd.DataFrame(
+            rentabilidades, columns=["Año", "Rentabilidad"]
+        )
+        chart = (
+            alt.Chart(df_rentabilidades)
+            .mark_bar()
+            .encode(
+                x=alt.X("Año:O", axis=alt.Axis(labelAngle=0)),
+                y="Rentabilidad:Q",
+                color=alt.condition(
+                    alt.datum.Rentabilidad > 0,
+                    alt.value("green"),  # Color for positive
+                    alt.value("red"),  # Color for negative
+                ),
+                tooltip=["Año", "Rentabilidad"],
+            )
+            .properties(title="Rentabilidad histórica")
+        )
+        st.altair_chart(chart, use_container_width=True)
 
 
 if selected_rows:
@@ -542,6 +601,7 @@ if selected_isin:
 
         with st.expander(f"Información del producto", expanded=True):
             render_general_info(producto)
+            render_rentabilidad(producto)
             cols = st.columns(2)
             with cols[0]:
                 render_general_info_tabla(producto)
@@ -567,4 +627,7 @@ else:
     st.write("Selecciona un producto para ver sus detalles.")
 
 # Disclaimer
-st.markdown("<small>:red-badge[:material/warning: Aviso] Rentabilidades pasadas no garantizan rentabilidades futuras. Invertir en fondos conlleva riesgo de pérdida de capital.</small>", unsafe_allow_html=True)
+st.markdown(
+    "<small>:red-badge[:material/warning: Aviso] Rentabilidades pasadas no garantizan rentabilidades futuras. Invertir en fondos conlleva riesgo de pérdida de capital.</small>",
+    unsafe_allow_html=True,
+)
