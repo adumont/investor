@@ -157,6 +157,7 @@ SELECT
     { "" if show_rentabilidad_media_135 else "-- " }yearCinco as "YoY 5Y",
     { "" if show_dias_desplazamiento else "-- " }diasDesplazamientoSuscripcion DiasS, diasDesplazamientoReembolso DiasR,
     { "" if show_categories else "-- " }categoria, categoriaMyInvestor, categoriaMstar,
+    trackingErrorYearUno as TE_1Y,
     entidadGestora as Gestora,
     divisasDto.codigo AS divisa,
     -- zonaGeografica,
@@ -403,6 +404,7 @@ def render_general_info_tabla(producto):
             "Hora límite suscripción mismo día",
             format_text(producto.get("horaLimiteSuscripcionMismoDia")),
         ),
+        ("Tracking Error a 1 año", format_text(producto.get("trackingErrorYearUno"))),
     ]
 
     st.subheader("Datos generales")
