@@ -528,6 +528,12 @@ def render_general_info_tabla(producto):
 
 if selected_rows:
     selected_isin = df.iloc[selected_rows[0]]["codigoIsin"]
+elif df.shape[0] == 1:
+    selected_isin = df.iloc[0]["codigoIsin"]
+else:
+    selected_isin = None
+
+if selected_isin:
     producto = get_producto_by_isin(selected_isin)
     if not producto:
         st.warning("No se encontraron los detalles del producto seleccionado.")
