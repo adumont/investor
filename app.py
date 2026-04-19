@@ -195,9 +195,9 @@ if "threshold_sector_saved" not in st.session_state:
 
 FILTRO = {
     "Cualquiera": "1=1",
-    "World": "( categoria = 'Global Equity Large Cap' or categoriaMstar = 'RV Global Cap. Grande Blend' )",
+    "World": "( categoria = 'Global Equity Large Cap' or categoria = 'Global Equity Lage Cap' or  categoriaMstar = 'RV Global Cap. Grande Blend' )",
     "Emergentes": "( zonaGeografica = 'Mercados Emergentes' OR categoria = 'Global Emerging Markets Equity' or categoriaMstar = 'RV Global Emergente' )",
-    "Small Caps": "( categoria = 'Global Equity Mid/Small Cap' or categoriaMstar = 'RV Global Cap. Pequeña' )  and zonaGeografica = 'Global'",
+    "Small Caps": "categoria = 'Global Equity Mid/Small Cap' or categoriaMstar = 'RV Global Cap. Pequeña'",
     "Oro y Metales": "categoriaMstar = 'RV Sector Oro y Metales preciosos' OR categoria = 'Precious Metals Sector Equity'",
 }
 
