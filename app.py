@@ -200,7 +200,7 @@ df = duckdb.query(query).df()
 tabla = st.dataframe(
     df,
     # height=800,
-    use_container_width=True,
+    width='stretch',
     hide_index=True,
     on_select="rerun",
     selection_mode="single-row",
@@ -284,7 +284,7 @@ def render_composiciones(producto):
             for comp in composiciones
         ]
     )
-    st.dataframe(composiciones_df, hide_index=True, use_container_width=True)
+    st.dataframe(composiciones_df, hide_index=True, width='stretch',)
 
 
 def render_sectores(producto):
@@ -452,7 +452,7 @@ def render_rentabilidad(producto):
             .properties(title="Rentabilidad histórica")
         )
         with cols[0]:
-            st.altair_chart(chart, use_container_width=True)
+            st.altair_chart(chart, width='stretch')
 
     # now, same with YearUno, YearTres and YearCinco, but as YoY a 1, 3, y 5 años (Year over Year)
     yoy_rentabilidades = []
@@ -482,7 +482,7 @@ def render_rentabilidad(producto):
             .properties(title="Rentabilidad anual a 1, 3 y 5 años")
         )
         with cols[1]:
-            st.altair_chart(chart_yoy, use_container_width=True)
+            st.altair_chart(chart_yoy, width='stretch')
 
     # Disclaimer
     st.markdown(
