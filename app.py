@@ -74,18 +74,16 @@ with cols[1]:
     )
 
 cols = st.columns(4)
-selected_filter = cols[0].selectbox("Selecciona un filtro", options=list(FILTRO.keys()))
+selected_filter = cols[0].selectbox("Filtro rápido:", options=list(FILTRO.keys()))
 selected_divisa = cols[1].multiselect(
-    "Selecciona una divisa", options=list(DIVISAS), default=["EUR"]
+    "Filtro por divisa", options=list(DIVISAS), default=["EUR"]
 )
 selected_producto = cols[2].multiselect(
-    "Selecciona un tipo de producto",
+    "Filtro por tipo de producto",
     options=list(TIPOS_PRODUCTO),
     default=["FONDOS_INDEXADOS"],
 )
-selected_gestora = cols[3].multiselect(
-    "Selecciona una gestora", options=list(GESTORAS)
-)
+selected_gestora = cols[3].multiselect("Filtro por gestora:", options=list(GESTORAS))
 
 selected_sector = None
 
@@ -95,20 +93,20 @@ with st.expander("Filtrado avanzado & Selección de columnas", expanded=False):
     with st.container():
         cols = st.columns(4)
         selected_categoria = cols[0].multiselect(
-            "Selecciona una categoría", options=list(CATEGORIAS)
+            "Filtro por categoría", options=list(CATEGORIAS)
         )
         selected_tipo_activo = cols[0].multiselect(
-            "Selecciona un tipo de activo", options=list(TIPO_ACTIVO)
+            "Filtro por tipo de activo", options=list(TIPO_ACTIVO)
         )
         selected_categoria_myinvestor = cols[1].multiselect(
-            "Selecciona una categoría MyInvestor",
+            "Filtro por categoría MyInvestor",
             options=list(CATEGORIAS_MYINVESTOR),
         )
         selected_categoria_mstar = cols[2].multiselect(
-            "Selecciona una categoría Morningstar", options=list(CATEGORIAS_MSTAR)
+            "Filtro por categoría Morningstar", options=list(CATEGORIAS_MSTAR)
         )
         selected_zona = cols[3].multiselect(
-            "Selecciona una zona geográfica", options=list(ZONAS)
+            "Filtro por zona geográfica", options=list(ZONAS)
         )
 
     with st.container():
@@ -131,7 +129,13 @@ def get_filtro_sql(field: str, options: list[str]):
     return (
         field
         + " IN ("
-        + ", ".join([f"""'{opt.replace("'", "''")}'""" for opt in options if opt != "Cualquiera"])
+        + ", ".join(
+            [
+                f"""'{opt.replace("'", "''")}'"""
+                for opt in options
+                if opt != "Cualquiera"
+            ]
+        )
         + ")"
     )
 
@@ -241,9 +245,50 @@ def render_comisiones(producto):
         )
 
 
+def render_regiones(producto):
+    if not producto or "listaRegiones" not in producto:
+        return
+    regiones = producto["listaRegiones"]
+    if not regiones or len(regiones) == 0:
+        return
+
+    regiones = sorted(regiones, key=lambda x: float(x["porcent"]), reverse=True)
+    st.subheader("Regiones")
+    regiones_md = "| Región | Porcentaje |\n|---|---|\n"
+    for reg in regiones:
+        regiones_md += f"| {reg['nombre']} | {reg['porcent']} |\n"
+    st.markdown(regiones_md)
+
+
+def render_composiciones(producto):
+    if not producto or "listaComposiciones" not in producto:
+        return
+    composiciones = producto["listaComposiciones"]
+    if not composiciones or len(composiciones) == 0:
+        return
+
+    composiciones = sorted(
+        composiciones, key=lambda x: to_float(x["porcentaje"]), reverse=True
+    )
+
+    st.subheader("Composiciones")
+    composiciones_df = pd.DataFrame(
+        [
+            {
+                "ISIN": comp.get("codigoIsin"),
+                "Nombre": comp.get("nombreFondo"),
+                "Categoría": comp.get("categoria"),
+                "Porcentaje": comp.get("porcentaje"),
+            }
+            for comp in composiciones
+        ]
+    )
+    st.dataframe(composiciones_df, hide_index=True, use_container_width=True)
+
+
 def render_sectores(producto):
     if not producto or "listaSectores" not in producto:
-        return "No hay información de sectores disponible."
+        return
     sectores = producto["listaSectores"]
     if not sectores or len(sectores) == 0:
         return
@@ -466,7 +511,15 @@ if selected_isin:
                 render_general_info_tabla(producto)
             with cols[1]:
                 render_comisiones(producto)
-            render_sectores(producto)
+
+            with st.container(horizontal=True):
+                with st.container():
+                    render_sectores(producto)
+                with st.container():
+                    render_regiones(producto)
+
+            render_composiciones(producto)
+
             with st.expander("Detalle completo del producto", expanded=False):
                 st.json(producto)
 
