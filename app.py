@@ -7,6 +7,14 @@ from dotenv import load_dotenv
 from os import getenv
 import datetime
 
+from vars import CACHE_TTL
+
+from productos import (
+    get_productos,
+    get_df_productos,
+    get_listas_opciones,
+)
+
 load_dotenv()
 
 # example of 1 product
@@ -169,35 +177,9 @@ st.set_page_config(
     page_title="Investor", layout="wide", page_icon=":material/finance_mode:"
 )
 
-CACHE_TTL = 6 * 60 * 60  # 6 horas
-
 if "threshold_sector_saved" not in st.session_state:
     st.session_state.threshold_sector_saved = 20
 
-
-@st.cache_data(show_spinner="Descargando datos...", ttl=CACHE_TTL)
-def download_json_from_url(url):
-    import requests
-
-    response = requests.get(url)
-    st.write(f"Descargando datos desde {url}...")
-
-    return response.json()
-
-
-@st.cache_data(show_spinner="Descargando datos...", ttl=CACHE_TTL)
-def read_json_from_file(filename):
-    with open(filename, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-# productos_lista = download_json_from_url(getenv("PRODUCT_JSON_URL"))
-productos_lista = read_json_from_file("myinvestor.json")
-
-# with st.expander("Productos JSON"):
-#     st.json(productos_lista[0])
-
-df_productos = pd.DataFrame(productos_lista)
 
 # query = """
 #     SELECT
@@ -213,16 +195,26 @@ df_productos = pd.DataFrame(productos_lista)
 
 FILTRO = {
     "Cualquiera": "1=1",
-    "World (indexados)": "( categoria = 'Global Equity Large Cap' or categoriaMstar = 'RV Global Cap. Grande Blend' )  and zonaGeografica = 'Global' and tipoProductoEnum = 'FONDOS_INDEXADOS'",
-    "Emergentes (indexados)": "( zonaGeografica = 'Mercados Emergentes' OR categoria = 'Global Emerging Markets Equity' or categoriaMstar = 'RV Global Emergente' ) and tipoProductoEnum = 'FONDOS_INDEXADOS'",
-    "Small Caps (indexados)": "( categoria = 'Global Equity Mid/Small Cap' or categoriaMstar = 'RV Global Cap. Pequeña' )  and zonaGeografica = 'Global' and tipoProductoEnum = 'FONDOS_INDEXADOS'",
+    "World": "( categoria = 'Global Equity Large Cap' or categoriaMstar = 'RV Global Cap. Grande Blend' )",
+    "Emergentes": "( zonaGeografica = 'Mercados Emergentes' OR categoria = 'Global Emerging Markets Equity' or categoriaMstar = 'RV Global Emergente' )",
+    "Small Caps": "( categoria = 'Global Equity Mid/Small Cap' or categoriaMstar = 'RV Global Cap. Pequeña' )  and zonaGeografica = 'Global'",
     "Oro y Metales": "categoriaMstar = 'RV Sector Oro y Metales preciosos' OR categoria = 'Precious Metals Sector Equity'",
 }
 
-DIVISAS = df_productos["divisasDto"].apply(lambda x: x["codigo"]).unique()
-ZONAS = df_productos["zonaGeografica"].unique()
-TIPOS_PRODUCTO = df_productos["tipoProductoEnum"].unique()
+productos_lista = get_productos()
 
+df_productos = get_df_productos(productos_lista)
+
+(
+    DIVISAS,
+    ZONAS,
+    TIPOS_PRODUCTO,
+    CATEGORIAS,
+    CATEGORIAS_MYINVESTOR,
+    CATEGORIAS_MSTAR,
+    GESTORAS,
+    SECTORES,
+) = get_listas_opciones(df_productos)
 
 cols = st.columns(2)
 with cols[0]:
@@ -235,56 +227,20 @@ with cols[1]:
     )
 
 cols = st.columns(4)
-with cols[0]:
-    selected_filter = st.selectbox("Selecciona un filtro", options=list(FILTRO.keys()))
-with cols[1]:
-    selected_divisa = st.multiselect(
-        "Selecciona una divisa", options=list(DIVISAS)
-    )
-with cols[2]:
-    selected_producto = st.multiselect(
-        "Selecciona un tipo de producto", options=list(TIPOS_PRODUCTO)
-    )
-with cols[3]:
-    selected_zona = st.multiselect(
-        "Selecciona una zona geográfica", options=list(ZONAS)
-    )
+selected_filter = cols[0].selectbox("Selecciona un filtro", options=list(FILTRO.keys()))
+selected_divisa = cols[1].multiselect(
+    "Selecciona una divisa", options=list(DIVISAS), default=["EUR"]
+)
+selected_producto = cols[2].multiselect(
+    "Selecciona un tipo de producto",
+    options=list(TIPOS_PRODUCTO),
+    default=["FONDOS_INDEXADOS"],
+)
+selected_gestora = cols[3].multiselect(
+    "Selecciona una gestora", options=list(GESTORAS)
+)
 
-CATEGORIAS = df_productos["categoria"].unique()
-CATEGORIAS_MYINVESTOR = df_productos["categoriaMyInvestor"].unique()
-CATEGORIAS_MSTAR = df_productos["categoriaMstar"].unique()
-GESTORAS = df_productos["entidadGestora"].unique()
-
-SECTORES = []
 selected_sector = None
-# query_sectores_unicos = """
-# SELECT DISTINCT
-#     sector.nombre AS nombre_sector
-# FROM
-#     df_productos,
-#     UNNEST(listaSectores) AS t(sector)
-# ORDER BY
-#     nombre_sector
-# """
-# df_sectores_unicos = duckdb.query(query_sectores_unicos).df()
-# cols = st.columns(2)
-
-# def update_threshold_sector():
-#     st.session_state.threshold_sector_saved = st.session_state.get("threshold_sector", 20)
-#     st.rerun()
-
-# with cols[0]:
-#     SECTORES = {"Cualquiera": "1=1"}
-#     # we want to filter products that have a sector with name = sector, but listaSectores is a list of objects with field "nombre", so we need to use EXISTS with UNNEST
-#     # we also want to have s.sector.porcent above 20%
-#     for sector in df_sectores_unicos["nombre_sector"]:
-#         SECTORES[sector] = f"list_any_value(list_transform(list_filter(listaSectores, x -> x.nombre = '{sector}'),x -> x.porcent > {st.session_state.threshold_sector_saved})) = true"
-
-#     selected_sector = st.selectbox(
-#         "Selecciona un sector", options=list(SECTORES.keys())
-#     )
-# with cols[1]:
-#     st.slider("Porcentaje mínimo en sector seleccionado", min_value=0, max_value=100, value=20, step=1, on_change=update_threshold_sector)
 
 year = datetime.date.today().year
 
@@ -301,20 +257,34 @@ with st.expander("Filtrado avanzado & Selección de columnas", expanded=False):
         selected_categoria_mstar = cols[2].multiselect(
             "Selecciona una categoría Morningstar", options=list(CATEGORIAS_MSTAR)
         )
-        selected_gestora = cols[3].multiselect(
-            "Selecciona una gestora", options=list(GESTORAS)
+        selected_zona = cols[3].multiselect(
+            "Selecciona una zona geográfica", options=list(ZONAS)
         )
+
     with st.container():
         cols = st.columns(3)
-        show_rentabilidad_anios = cols[0].toggle("Mostrar rentabilidad ultimos 6 años", value=True)
-        show_rentabilidad_media_135 = cols[0].toggle("Mostrar rentabilidad media a 1,3,5 años", value=True)
+        show_rentabilidad_anios = cols[0].toggle(
+            "Mostrar rentabilidad ultimos 6 años", value=True
+        )
+        show_rentabilidad_media_135 = cols[0].toggle(
+            "Mostrar rentabilidad media a 1,3,5 años", value=True
+        )
         show_categories = cols[1].toggle("Mostrar categorias", value=False)
-        show_dias_desplazamiento = cols[2].toggle("Mostrar días desplazamiento suscripción y reembolso", value=False)
+        show_dias_desplazamiento = cols[2].toggle(
+            "Mostrar días desplazamiento suscripción y reembolso", value=False
+        )
 
-def get_filtro_sql(field:str, options: list[str]):
+
+def get_filtro_sql(field: str, options: list[str]):
     if not options or "Cualquiera" in options:
         return "1=1"
-    return field + " IN (" + ", ".join([f"'{opt}'" for opt in options if opt != "Cualquiera"]) + ")"
+    return (
+        field
+        + " IN ("
+        + ", ".join([f"'{opt}'" for opt in options if opt != "Cualquiera"])
+        + ")"
+    )
+
 
 query = f"""
 SELECT 
@@ -418,6 +388,7 @@ def render_comisiones(producto):
             f":material/link: [Key Investor Information Document]({producto['urlKiid']})",
             unsafe_allow_html=True,
         )
+
 
 def render_sectores(producto):
     if not producto or "listaSectores" not in producto:
