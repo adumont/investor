@@ -38,7 +38,7 @@ if "threshold_sector_saved" not in st.session_state:
 #     ORDER BY indicadorRiesgo ASC, nombre ASC, sector_porcentaje DESC
 # """
 
-FILTRO = {
+FILTROS_RAPIDOS = {
     "Cualquiera": "1=1",
     "World": "categoria = 'Global Equity Large Cap' or categoria = 'Global Equity Lage Cap' or  categoriaMstar = 'RV Global Cap. Grande Blend'",
     "S&P 500": "categoria = 'US Equity Large Cap Blend' or categoriaMstar = 'RV USA Cap. Grande Blend'",
@@ -75,7 +75,7 @@ with cols[1]:
     )
 
 cols = st.columns(4)
-selected_filter = cols[0].selectbox("Filtro rápido:", options=list(FILTRO.keys()))
+selected_filter = cols[0].selectbox("Filtro rápido:", options=list(FILTROS_RAPIDOS.keys()))
 selected_divisa = cols[1].multiselect(
     "Filtro por divisa", options=list(DIVISAS), default=["EUR"]
 )
@@ -167,7 +167,7 @@ FROM df_productos
 WHERE
     ( codigoIsin ILIKE '%{filter_name}%' OR -- filtro por ISIN
         nombre ILIKE '%{filter_name}%' ) -- filtro por nombre
-    AND ( {FILTRO[selected_filter]} ) -- filtro 
+    AND ( {FILTROS_RAPIDOS[selected_filter]} ) -- filtro 
     AND ( {get_filtro_sql("divisa", selected_divisa)} ) -- filtro divisa
     AND ( {get_filtro_sql("zonaGeografica", selected_zona)} ) -- filtro zona geográfica
     AND ( {get_filtro_sql("tipoProductoEnum", selected_producto)} ) -- filtro tipo de producto
