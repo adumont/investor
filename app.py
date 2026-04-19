@@ -644,3 +644,7 @@ st.markdown(
     "<small>:red-badge[:material/warning: Aviso] Rentabilidades pasadas no garantizan rentabilidades futuras. Invertir en fondos conlleva riesgo de pérdida de capital.</small>",
     unsafe_allow_html=True,
 )
+st.markdown(
+    "<small>:orange-badge[:material/warning: Aviso] El listado de productos es una *foto* del 18/04/2006.</small>",
+    unsafe_allow_html=True,
+)
