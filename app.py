@@ -219,23 +219,9 @@ FILTRO = {
     "Oro y Metales": "categoriaMstar = 'RV Sector Oro y Metales preciosos' OR categoria = 'Precious Metals Sector Equity'",
 }
 
-
-# get list of divisas from df_productos
-divisas_list = df_productos["divisasDto"].apply(lambda x: x["codigo"]).unique()
-
-DIVISAS = {"Cualquiera": "1=1"}
-for divisa in df_productos["divisasDto"].apply(lambda x: x["codigo"]).unique():
-    DIVISAS[divisa] = f"divisasDto.codigo = '{divisa}'"
-
-# Filtro de zona geográfica
-ZONAS = {"Cualquiera": "1=1"}
-for zona in df_productos["zonaGeografica"].unique():
-    ZONAS[zona] = f"zonaGeografica = '{zona}'"
-
-# Filtro Tipo de producto
-TIPOS_PRODUCTO = {"Cualquiera": "1=1"}
-for tipo in df_productos["tipoProductoEnum"].unique():
-    TIPOS_PRODUCTO[tipo] = f"tipoProductoEnum = '{tipo}'"
+DIVISAS = df_productos["divisasDto"].apply(lambda x: x["codigo"]).unique()
+ZONAS = df_productos["zonaGeografica"].unique()
+TIPOS_PRODUCTO = df_productos["tipoProductoEnum"].unique()
 
 
 cols = st.columns(2)
@@ -252,33 +238,25 @@ cols = st.columns(4)
 with cols[0]:
     selected_filter = st.selectbox("Selecciona un filtro", options=list(FILTRO.keys()))
 with cols[1]:
-    selected_divisa = st.selectbox(
-        "Selecciona una divisa", options=list(DIVISAS.keys())
+    selected_divisa = st.multiselect(
+        "Selecciona una divisa", options=list(DIVISAS)
     )
 with cols[2]:
-    selected_producto = st.selectbox(
-        "Selecciona un tipo de producto", options=list(TIPOS_PRODUCTO.keys())
+    selected_producto = st.multiselect(
+        "Selecciona un tipo de producto", options=list(TIPOS_PRODUCTO)
     )
 with cols[3]:
-    selected_zona = st.selectbox(
-        "Selecciona una zona geográfica", options=list(ZONAS.keys())
+    selected_zona = st.multiselect(
+        "Selecciona una zona geográfica", options=list(ZONAS)
     )
 
-CATEGORIAS = {"Cualquiera": "1=1"}
-for categoria in df_productos["categoria"].unique():
-    CATEGORIAS[categoria] = f"categoria = '{categoria}'"
+CATEGORIAS = df_productos["categoria"].unique()
+CATEGORIAS_MYINVESTOR = df_productos["categoriaMyInvestor"].unique()
+CATEGORIAS_MSTAR = df_productos["categoriaMstar"].unique()
+GESTORAS = df_productos["entidadGestora"].unique()
 
-CATEGORIAS_MYINVESTOR = {"Cualquiera": "1=1"}
-for categoria in df_productos["categoriaMyInvestor"].unique():
-    CATEGORIAS_MYINVESTOR[categoria] = f"categoriaMyInvestor = '{categoria}'"
-
-CATEGORIAS_MSTAR = {"Cualquiera": "1=1"}
-for categoria in df_productos["categoriaMstar"].unique():
-    CATEGORIAS_MSTAR[categoria] = f"categoriaMstar = '{categoria}'"
-
-
-SECTORES = {"Cualquiera": "1=1"}
-selected_sector = "Cualquiera"
+SECTORES = []
+selected_sector = None
 # query_sectores_unicos = """
 # SELECT DISTINCT
 #     sector.nombre AS nombre_sector
@@ -311,21 +289,32 @@ selected_sector = "Cualquiera"
 year = datetime.date.today().year
 
 with st.expander("Filtrado avanzado & Selección de columnas", expanded=False):
-    cols = st.columns(3)
-    selected_categoria = cols[0].selectbox(
-        "Selecciona una categoría", options=list(CATEGORIAS.keys())
-    )
-    selected_categoria_myinvestor = cols[1].selectbox(
-        "Selecciona una categoría MyInvestor",
-        options=list(CATEGORIAS_MYINVESTOR.keys()),
-    )
-    selected_categoria_mstar = cols[2].selectbox(
-        "Selecciona una categoría Morningstar", options=list(CATEGORIAS_MSTAR.keys())
-    )
-    show_rentabilidad_anios = cols[0].toggle("Mostrar rentabilidad ultimos 6 años", value=True)
-    show_rentabilidad_media_135 = cols[0].toggle("Mostrar rentabilidad media a 1,3,5 años", value=True)
-    show_categories = cols[1].toggle("Mostrar categorias", value=False)
-    show_dias_desplazamiento = cols[2].toggle("Mostrar días desplazamiento suscripción y reembolso", value=False)
+    with st.container():
+        cols = st.columns(4)
+        selected_categoria = cols[0].multiselect(
+            "Selecciona una categoría", options=list(CATEGORIAS)
+        )
+        selected_categoria_myinvestor = cols[1].multiselect(
+            "Selecciona una categoría MyInvestor",
+            options=list(CATEGORIAS_MYINVESTOR),
+        )
+        selected_categoria_mstar = cols[2].multiselect(
+            "Selecciona una categoría Morningstar", options=list(CATEGORIAS_MSTAR)
+        )
+        selected_gestora = cols[3].multiselect(
+            "Selecciona una gestora", options=list(GESTORAS)
+        )
+    with st.container():
+        cols = st.columns(3)
+        show_rentabilidad_anios = cols[0].toggle("Mostrar rentabilidad ultimos 6 años", value=True)
+        show_rentabilidad_media_135 = cols[0].toggle("Mostrar rentabilidad media a 1,3,5 años", value=True)
+        show_categories = cols[1].toggle("Mostrar categorias", value=False)
+        show_dias_desplazamiento = cols[2].toggle("Mostrar días desplazamiento suscripción y reembolso", value=False)
+
+def get_filtro_sql(field:str, options: list[str]):
+    if not options or "Cualquiera" in options:
+        return "1=1"
+    return field + " IN (" + ", ".join([f"'{opt}'" for opt in options if opt != "Cualquiera"]) + ")"
 
 query = f"""
 SELECT 
@@ -353,13 +342,13 @@ WHERE
     ( codigoIsin ILIKE '%{filter_name}%' OR -- filtro por ISIN
         nombre ILIKE '%{filter_name}%' ) -- filtro por nombre
     AND ( {FILTRO[selected_filter]} ) -- filtro 
-    AND ( {DIVISAS[selected_divisa]} ) -- filtro divisa
-    AND ( {ZONAS[selected_zona]} ) -- filtro zona geográfica
-    AND ( {TIPOS_PRODUCTO[selected_producto]} ) -- filtro tipo de producto
-    AND ( {CATEGORIAS[selected_categoria]} ) -- filtro categoría
-    AND ( {CATEGORIAS_MSTAR[selected_categoria_mstar]} ) -- filtro categoría Morningstar
-    AND ( {CATEGORIAS_MYINVESTOR[selected_categoria_myinvestor]} ) -- filtro categoría MyInvestor
-    AND ( {SECTORES[selected_sector]} ) -- filtro sector
+    AND ( {get_filtro_sql("divisa", selected_divisa)} ) -- filtro divisa
+    AND ( {get_filtro_sql("zonaGeografica", selected_zona)} ) -- filtro zona geográfica
+    AND ( {get_filtro_sql("tipoProductoEnum", selected_producto)} ) -- filtro tipo de producto
+    AND ( {get_filtro_sql("categoria", selected_categoria)} ) -- filtro categoría
+    AND ( {get_filtro_sql("categoriaMstar", selected_categoria_mstar)} ) -- filtro categoría Morningstar
+    AND ( {get_filtro_sql("categoriaMyInvestor", selected_categoria_myinvestor)} ) -- filtro categoría MyInvestor
+    AND ( {get_filtro_sql("entidadGestora", selected_gestora)} ) -- filtro gestora
     AND status = 'OPEN'
 ORDER BY indicadorRiesgo ASC, ter ASC
 """
