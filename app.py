@@ -213,9 +213,10 @@ df_productos = pd.DataFrame(productos_lista)
 
 FILTRO = {
     "Cualquiera": "1=1",
-    "Emergentes": "tipoActivo = 'Renta Variable' and zonaGeografica = 'Mercados Emergentes' and tipoProductoEnum = 'FONDOS_INDEXADOS'",
-    "World": """(nombre ilike '%world%' or nombre ilike '%global%' ) AND tipoActivo = 'Renta Variable' and zonaGeografica = 'Global' and tipoProductoEnum = 'FONDOS_INDEXADOS'""",
-    "Oro y Metales": "categoriaMstar = 'RV Sector Oro y Metales preciosos'",
+    "World (indexados)": "( categoria = 'Global Equity Large Cap' or categoriaMstar = 'RV Global Cap. Grande Blend' )  and zonaGeografica = 'Global' and tipoProductoEnum = 'FONDOS_INDEXADOS'",
+    "Emergentes (indexados)": "( zonaGeografica = 'Mercados Emergentes' OR categoria = 'Global Emerging Markets Equity' or categoriaMstar = 'RV Global Emergente' ) and tipoProductoEnum = 'FONDOS_INDEXADOS'",
+    "Small Caps (indexados)": "( categoria = 'Global Equity Mid/Small Cap' or categoriaMstar = 'RV Global Cap. Pequeña' )  and zonaGeografica = 'Global' and tipoProductoEnum = 'FONDOS_INDEXADOS'",
+    "Oro y Metales": "categoriaMstar = 'RV Sector Oro y Metales preciosos' OR categoria = 'Precious Metals Sector Equity'",
 }
 
 
@@ -275,20 +276,6 @@ CATEGORIAS_MSTAR = {"Cualquiera": "1=1"}
 for categoria in df_productos["categoriaMstar"].unique():
     CATEGORIAS_MSTAR[categoria] = f"categoriaMstar = '{categoria}'"
 
-cols = st.columns(3)
-with cols[0]:
-    selected_categoria = st.selectbox(
-        "Selecciona una categoría", options=list(CATEGORIAS.keys())
-    )
-with cols[1]:
-    selected_categoria_myinvestor = st.selectbox(
-        "Selecciona una categoría MyInvestor",
-        options=list(CATEGORIAS_MYINVESTOR.keys()),
-    )
-with cols[2]:
-    selected_categoria_mstar = st.selectbox(
-        "Selecciona una categoría Morningstar", options=list(CATEGORIAS_MSTAR.keys())
-    )
 
 SECTORES = {"Cualquiera": "1=1"}
 selected_sector = "Cualquiera"
@@ -323,22 +310,40 @@ selected_sector = "Cualquiera"
 
 year = datetime.date.today().year
 
+with st.expander("Filtrado avanzado & Selección de columnas", expanded=False):
+    cols = st.columns(3)
+    selected_categoria = cols[0].selectbox(
+        "Selecciona una categoría", options=list(CATEGORIAS.keys())
+    )
+    selected_categoria_myinvestor = cols[1].selectbox(
+        "Selecciona una categoría MyInvestor",
+        options=list(CATEGORIAS_MYINVESTOR.keys()),
+    )
+    selected_categoria_mstar = cols[2].selectbox(
+        "Selecciona una categoría Morningstar", options=list(CATEGORIAS_MSTAR.keys())
+    )
+    show_rentabilidad_anios = cols[0].toggle("Mostrar rentabilidad ultimos 6 años", value=True)
+    show_rentabilidad_media_135 = cols[0].toggle("Mostrar rentabilidad media a 1,3,5 años", value=True)
+    show_categories = cols[1].toggle("Mostrar categorias", value=False)
+    show_dias_desplazamiento = cols[2].toggle("Mostrar días desplazamiento suscripción y reembolso", value=False)
+
 query = f"""
 SELECT 
     codigoIsin,
     nombre,
     indicadorRiesgo as Risk,
     ter as TER,
-    ytd as "{ year }", --, yearUno, yearTres, yearCinco,
-    rentabilidadPasadaUno as "{ year - 1 }",
-    rentabilidadPasadaDos as "{ year - 2 }",
-    rentabilidadPasadaTres as "{ year - 3 }",
-    rentabilidadPasadaCuatro as "{ year - 4 }",
-    rentabilidadPasadaCinco as "{ year - 5 }",
-    yearUno as "YoY 1Y",
-    yearTres as "YoY 3Y",
-    yearCinco as "YoY 5Y",
-    diasDesplazamientoSuscripcion DiasS, diasDesplazamientoReembolso DiasR,
+    { "" if show_categories else "-- " }categoria, categoriaMyInvestor, categoriaMstar,
+    ytd as "{ year }",
+    { "" if show_rentabilidad_anios else "-- " }rentabilidadPasadaUno as "{ year - 1 }",
+    { "" if show_rentabilidad_anios else "-- " }rentabilidadPasadaDos as "{ year - 2 }",
+    { "" if show_rentabilidad_anios else "-- " }rentabilidadPasadaTres as "{ year - 3 }",
+    { "" if show_rentabilidad_anios else "-- " }rentabilidadPasadaCuatro as "{ year - 4 }",
+    { "" if show_rentabilidad_anios else "-- " }rentabilidadPasadaCinco as "{ year - 5 }",
+    { "" if show_rentabilidad_media_135 else "-- " }yearUno as "YoY 1Y",
+    { "" if show_rentabilidad_media_135 else "-- " }yearTres as "YoY 3Y",
+    { "" if show_rentabilidad_media_135 else "-- " }yearCinco as "YoY 5Y",
+    { "" if show_dias_desplazamiento else "-- " }diasDesplazamientoSuscripcion DiasS, diasDesplazamientoReembolso DiasR,
     entidadGestora as Gestora,
     divisasDto.codigo AS divisa,
     -- zonaGeografica,
@@ -347,14 +352,14 @@ FROM df_productos
 WHERE
     ( codigoIsin ILIKE '%{filter_name}%' OR -- filtro por ISIN
         nombre ILIKE '%{filter_name}%' ) -- filtro por nombre
-    AND {FILTRO[selected_filter]} -- filtro 
-    AND {DIVISAS[selected_divisa]} -- filtro divisa
-    AND {ZONAS[selected_zona]} -- filtro zona geográfica
-    AND {TIPOS_PRODUCTO[selected_producto]} -- filtro tipo de producto
-    AND {CATEGORIAS[selected_categoria]} -- filtro categoría
-    AND {CATEGORIAS_MSTAR[selected_categoria_mstar]} -- filtro categoría Morningstar
-    AND {CATEGORIAS_MYINVESTOR[selected_categoria_myinvestor]} -- filtro categoría MyInvestor
-    AND {SECTORES[selected_sector]} -- filtro sector
+    AND ( {FILTRO[selected_filter]} ) -- filtro 
+    AND ( {DIVISAS[selected_divisa]} ) -- filtro divisa
+    AND ( {ZONAS[selected_zona]} ) -- filtro zona geográfica
+    AND ( {TIPOS_PRODUCTO[selected_producto]} ) -- filtro tipo de producto
+    AND ( {CATEGORIAS[selected_categoria]} ) -- filtro categoría
+    AND ( {CATEGORIAS_MSTAR[selected_categoria_mstar]} ) -- filtro categoría Morningstar
+    AND ( {CATEGORIAS_MYINVESTOR[selected_categoria_myinvestor]} ) -- filtro categoría MyInvestor
+    AND ( {SECTORES[selected_sector]} ) -- filtro sector
     AND status = 'OPEN'
 ORDER BY indicadorRiesgo ASC, ter ASC
 """
