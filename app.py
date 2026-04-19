@@ -281,7 +281,7 @@ def get_filtro_sql(field: str, options: list[str]):
     return (
         field
         + " IN ("
-        + ", ".join([f"'{opt}'" for opt in options if opt != "Cualquiera"])
+        + ", ".join([f"""'{opt.replace("'", "''")}'""" for opt in options if opt != "Cualquiera"])
         + ")"
     )
 
