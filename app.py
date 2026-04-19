@@ -418,7 +418,12 @@ def render_comisiones(producto):
     for com in comisiones:
         comisiones_md += f"| {com['nombre']} | {com['porcentaje']}% |\n"
     st.markdown(comisiones_md)
-
+    # repeat link al KIID
+    if producto.get("urlKiid"):
+        st.markdown(
+            f":material/link: [Key Investor Information Document]({producto['urlKiid']})",
+            unsafe_allow_html=True,
+        )
 
 def render_sectores(producto):
     if not producto or "listaSectores" not in producto:
