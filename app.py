@@ -214,6 +214,7 @@ df_productos = get_df_productos(productos_lista)
     CATEGORIAS_MSTAR,
     GESTORAS,
     SECTORES,
+    TIPO_ACTIVO,
 ) = get_listas_opciones(df_productos)
 
 cols = st.columns(2)
@@ -249,6 +250,9 @@ with st.expander("Filtrado avanzado & Selección de columnas", expanded=False):
         cols = st.columns(4)
         selected_categoria = cols[0].multiselect(
             "Selecciona una categoría", options=list(CATEGORIAS)
+        )
+        selected_tipo_activo = cols[0].multiselect(
+            "Selecciona un tipo de activo", options=list(TIPO_ACTIVO)
         )
         selected_categoria_myinvestor = cols[1].multiselect(
             "Selecciona una categoría MyInvestor",
@@ -319,6 +323,7 @@ WHERE
     AND ( {get_filtro_sql("categoriaMstar", selected_categoria_mstar)} ) -- filtro categoría Morningstar
     AND ( {get_filtro_sql("categoriaMyInvestor", selected_categoria_myinvestor)} ) -- filtro categoría MyInvestor
     AND ( {get_filtro_sql("entidadGestora", selected_gestora)} ) -- filtro gestora
+    AND ( {get_filtro_sql("tipoActivo", selected_tipo_activo)} ) -- filtro tipo de activo
     AND status = 'OPEN'
 ORDER BY indicadorRiesgo ASC, ter ASC
 """

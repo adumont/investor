@@ -38,17 +38,25 @@ def get_listas_opciones(_df_productos):
     
     TIPOS_PRODUCTO = _df_productos["tipoProductoEnum"].unique()
 
+    TIPO_ACTIVO = _df_productos["tipoActivo"].apply(lambda x: str(x)).unique().tolist()
+    if "nan" in TIPO_ACTIVO:
+        TIPO_ACTIVO.remove("nan")
+
     CATEGORIAS = _df_productos["categoria"].apply(lambda x: str(x)).unique().tolist()
-    CATEGORIAS.remove("nan")
+    if "nan" in CATEGORIAS:
+        CATEGORIAS.remove("nan")
 
     CATEGORIAS_MYINVESTOR = _df_productos["categoriaMyInvestor"].apply(lambda x: str(x)).unique().tolist()
-    CATEGORIAS_MYINVESTOR.remove("nan")
+    if "nan" in CATEGORIAS_MYINVESTOR:
+        CATEGORIAS_MYINVESTOR.remove("nan")
 
     CATEGORIAS_MSTAR = _df_productos["categoriaMstar"].apply(lambda x: str(x)).unique().tolist()
-    CATEGORIAS_MSTAR.remove("nan")
+    if "nan" in CATEGORIAS_MSTAR:
+        CATEGORIAS_MSTAR.remove("nan")
 
     GESTORAS = _df_productos["entidadGestora"].apply(lambda x: str(x)).unique().tolist()
-    GESTORAS.remove("nan")
+    if "nan" in GESTORAS:
+        GESTORAS.remove("nan")
 
     SECTORES = []
 
@@ -61,4 +69,5 @@ def get_listas_opciones(_df_productos):
         CATEGORIAS_MSTAR,
         GESTORAS,
         SECTORES,
+        TIPO_ACTIVO,
     )
