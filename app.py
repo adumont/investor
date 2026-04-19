@@ -89,7 +89,7 @@ selected_sector = None
 
 year = datetime.date.today().year
 
-with st.expander("Filtrado avanzado & Selección de columnas", expanded=False):
+with st.expander("Más filtros & Selección de columnas", expanded=False):
     with st.container():
         cols = st.columns(4)
         selected_categoria = cols[0].multiselect(
