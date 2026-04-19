@@ -620,6 +620,13 @@ def render_rentabilidad(producto):
         with cols[1]:
             st.altair_chart(chart_yoy, use_container_width=True)
 
+    # Disclaimer
+    st.markdown(
+        "<small>:red-badge[:material/warning: Aviso] Rentabilidades pasadas no garantizan rentabilidades futuras. Invertir en fondos conlleva riesgo de pérdida de capital.</small>",
+        unsafe_allow_html=True,
+    )
+
+
 if selected_rows:
     selected_isin = df.iloc[selected_rows[0]]["codigoIsin"]
 elif df.shape[0] == 1:
