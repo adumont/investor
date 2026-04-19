@@ -43,6 +43,7 @@ FILTRO = {
     "World": "categoria = 'Global Equity Large Cap' or categoria = 'Global Equity Lage Cap' or  categoriaMstar = 'RV Global Cap. Grande Blend'",
     "S&P 500": "categoria = 'US Equity Large Cap Blend' or categoriaMstar = 'RV USA Cap. Grande Blend'",
     "Emergentes": "zonaGeografica = 'Mercados Emergentes' OR categoria = 'Global Emerging Markets Equity' or categoriaMstar = 'RV Global Emergente'",
+    "Japón": "categoria = 'Japan Equity' or categoriaMstar = 'RV Japón Cap. Grande'",
     "Small Caps": "categoria = 'Global Equity Mid/Small Cap' or categoriaMstar = 'RV Global Cap. Pequeña'",
     "Oro y Metales": "categoriaMstar = 'RV Sector Oro y Metales preciosos' OR categoria = 'Precious Metals Sector Equity'",
 }
