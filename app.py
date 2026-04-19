@@ -335,6 +335,9 @@ SELECT
     rentabilidadPasadaTres as "{ year - 3 }",
     rentabilidadPasadaCuatro as "{ year - 4 }",
     rentabilidadPasadaCinco as "{ year - 5 }",
+    yearUno as "YoY 1Y",
+    yearTres as "YoY 3Y",
+    yearCinco as "YoY 5Y",
     diasDesplazamientoSuscripcion DiasS, diasDesplazamientoReembolso DiasR,
     entidadGestora as Gestora,
     divisasDto.codigo AS divisa,
@@ -552,6 +555,8 @@ def render_general_info_tabla(producto):
 
 # render rentabilidad años pasados en un altair bar chart
 def render_rentabilidad(producto):
+    cols = st.columns(2)
+
     rentabilidades = []
     for i, span in enumerate(
         ["ytd"]
@@ -582,8 +587,38 @@ def render_rentabilidad(producto):
             )
             .properties(title="Rentabilidad histórica")
         )
-        st.altair_chart(chart, use_container_width=True)
+        with cols[0]:
+            st.altair_chart(chart, use_container_width=True)
 
+    # now, same with YearUno, YearTres and YearCinco, but as YoY a 1, 3, y 5 años (Year over Year)
+    yoy_rentabilidades = []
+    for span, label in [
+        ("yearUno", "1 año"),
+        ("yearTres", "3 años"),
+        ("yearCinco", "5 años"),
+    ]:
+        value = producto.get(span)
+        if value is not None:
+            yoy_rentabilidades.append((label, value))
+    if yoy_rentabilidades:
+        df_yoy = pd.DataFrame(yoy_rentabilidades, columns=["Periodo", "Rentabilidad"])
+        chart_yoy = (
+            alt.Chart(df_yoy)
+            .mark_bar()
+            .encode(
+                x=alt.X("Periodo:O", axis=alt.Axis(labelAngle=0)),
+                y="Rentabilidad:Q",
+                color=alt.condition(
+                    alt.datum.Rentabilidad > 0,
+                    alt.value("green"),  # Color for positive
+                    alt.value("red"),  # Color for negative
+                ),
+                tooltip=["Periodo", "Rentabilidad"],
+            )
+            .properties(title="Rentabilidad anual a 1, 3 y 5 años")
+        )
+        with cols[1]:
+            st.altair_chart(chart_yoy, use_container_width=True)
 
 if selected_rows:
     selected_isin = df.iloc[selected_rows[0]]["codigoIsin"]
