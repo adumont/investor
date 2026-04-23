@@ -547,6 +547,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 st.markdown(
-    "<small>:orange-badge[:material/warning: Aviso] El listado de productos es una *foto* del 22/04/2006.</small>",
+    "<small>:orange-badge[:material/warning: Aviso] El listado de productos es una *foto* del 22/04/2026.</small>",
     unsafe_allow_html=True,
 )
