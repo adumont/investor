@@ -71,7 +71,7 @@ with cols[1]:
     filter_name = st.text_input(
         "Filtrar por nombre or por ISIN (SQL ILIKE)",
         value="",
-        placeholder="Ejemplo: 'world', 'FR0000978371'...",
+        placeholder="Ejemplo: world, FR0000978371...",
     )
 
 cols = st.columns(4)
