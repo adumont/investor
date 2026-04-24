@@ -73,6 +73,7 @@ with cols[1]:
         value="",
         placeholder="Ejemplo: world, FR0000978371...",
     )
+    filter_name = filter_name.strip().replace("'", "''")  # escape single quotes for SQL query
 
 cols = st.columns(4)
 selected_filter = cols[0].selectbox("Filtro rápido:", options=list(FILTROS_RAPIDOS.keys()))
