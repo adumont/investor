@@ -550,8 +550,9 @@ def render_rentabilidad(producto):
     )
 
 
-if selected_rows:
-    selected_isin = df.iloc[selected_rows[0]]["codigoIsin"]
+selected_row_index = selected_rows[0] if selected_rows else None
+if selected_row_index is not None and 0 <= selected_row_index < len(df):
+    selected_isin = df.iloc[selected_row_index]["codigoIsin"]
 elif df.shape[0] == 1:
     selected_isin = df.iloc[0]["codigoIsin"]
 else:
