@@ -22,8 +22,8 @@ st.set_page_config(
     page_title="Investor", layout="wide", page_icon=":material/finance_mode:"
 )
 
-if "threshold_sector_saved" not in st.session_state:
-    st.session_state.threshold_sector_saved = 20
+if "threshold_sector" not in st.session_state:
+    st.session_state.threshold_sector = 20
 
 
 # query = """
@@ -134,12 +134,10 @@ with st.expander("Más filtros & Selección de columnas", expanded=False):
             "Umbral mínimo del sector (%)",
             min_value=0,
             max_value=100,
-            value=st.session_state.threshold_sector_saved,
             step=5,
+            key="threshold_sector",
             disabled=not selected_sector,
         )
-        if selected_sector:
-            st.session_state.threshold_sector_saved = threshold_sector
         show_sectores = cols[2].toggle(
             "Mostrar sector(es) seleccionados",
             value=False,
