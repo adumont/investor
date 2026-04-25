@@ -87,8 +87,6 @@ selected_producto = cols[2].multiselect(
 )
 selected_gestora = cols[3].multiselect("Filtro por gestora:", options=list(GESTORAS))
 
-selected_sector = None
-
 year = datetime.date.today().year
 
 with st.expander("Más filtros & Selección de columnas", expanded=False):
@@ -124,6 +122,23 @@ with st.expander("Más filtros & Selección de columnas", expanded=False):
             "Mostrar días desplazamiento suscripción y reembolso", value=False
         )
 
+    with st.container():
+        cols = st.columns([2, 1])
+        selected_sector = cols[0].multiselect(
+            "Filtro por sector (al menos uno debe cumplir el umbral)",
+            options=SECTORES,
+        )
+        threshold_sector = cols[1].slider(
+            "Umbral mínimo del sector (%)",
+            min_value=0,
+            max_value=100,
+            value=st.session_state.threshold_sector_saved,
+            step=5,
+            disabled=not selected_sector,
+        )
+        if selected_sector:
+            st.session_state.threshold_sector_saved = threshold_sector
+
 
 def get_filtro_sql(field: str, options: list[str]):
     if not options or "Cualquiera" in options:
@@ -140,6 +155,16 @@ def get_filtro_sql(field: str, options: list[str]):
         )
         + ")"
     )
+
+
+def get_filtro_sector_sql(sectores: list[str], threshold: float):
+    if not sectores:
+        return "1=1"
+    sector_list = ", ".join(f"'{s.replace(chr(39), chr(39)+chr(39))}'" for s in sectores)
+    return f"""codigoIsin IN (
+        SELECT codigoIsin FROM df_productos, UNNEST(listaSectores) AS t(s)
+        WHERE t.s.nombre IN ({sector_list}) AND t.s.porcent >= {threshold}
+    )"""
 
 
 query = f"""
@@ -177,6 +202,7 @@ WHERE
     AND ( {get_filtro_sql("categoriaMyInvestor", selected_categoria_myinvestor)} ) -- filtro categoría MyInvestor
     AND ( {get_filtro_sql("entidadGestora", selected_gestora)} ) -- filtro gestora
     AND ( {get_filtro_sql("tipoActivo", selected_tipo_activo)} ) -- filtro tipo de activo
+    AND ( {get_filtro_sector_sql(selected_sector, threshold_sector)} ) -- filtro sector
     AND status = 'OPEN'
 ORDER BY indicadorRiesgo ASC, ter ASC
 """

@@ -59,6 +59,13 @@ def get_listas_opciones(_df_productos):
         GESTORAS.remove("nan")
 
     SECTORES = []
+    for sector_list in _df_productos["listaSectores"].dropna():
+        if isinstance(sector_list, list):
+            for s in sector_list:
+                nombre = s.get("nombre")
+                if nombre and nombre not in SECTORES:
+                    SECTORES.append(nombre)
+    SECTORES.sort()
 
     return (
         DIVISAS,
