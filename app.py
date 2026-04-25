@@ -65,18 +65,20 @@ df_productos = get_df_productos(productos_lista)
 ) = get_listas_opciones(df_productos)
 
 cols = st.columns(2)
-with cols[0]:
-    st.title("Productos de Inversión en MyInvestor")
-with cols[1]:
-    filter_name = st.text_input(
-        "Filtrar por nombre or por ISIN (SQL ILIKE)",
-        value="",
-        placeholder="Ejemplo: world, FR0000978371...",
-    )
-    filter_name = filter_name.strip().replace("'", "''")  # escape single quotes for SQL query
+cols[0].title("Productos en MyInvestor")
+filter_name = cols[1].text_input(
+    "Filtrar por nombre or por ISIN (SQL ILIKE)",
+    value="",
+    placeholder="Ejemplo: world, FR0000978371...",
+)
+filter_name = filter_name.strip().replace(
+    "'", "''"
+)  # escape single quotes for SQL query
 
 cols = st.columns(4)
-selected_filter = cols[0].selectbox("Filtro rápido:", options=list(FILTROS_RAPIDOS.keys()))
+selected_filter = cols[0].selectbox(
+    "Filtro rápido:", options=list(FILTROS_RAPIDOS.keys())
+)
 selected_divisa = cols[1].multiselect(
     "Filtro por divisa", options=list(DIVISAS), default=["EUR"]
 )
@@ -165,7 +167,9 @@ def get_filtro_sql(field: str, options: list[str]):
 def get_filtro_sector_sql(sectores: list[str], threshold: float):
     if not sectores:
         return "1=1"
-    sector_list = ", ".join(f"'{s.replace(chr(39), chr(39)+chr(39))}'" for s in sectores)
+    sector_list = ", ".join(
+        f"'{s.replace(chr(39), chr(39)+chr(39))}'" for s in sectores
+    )
     return f"""codigoIsin IN (
         SELECT codigoIsin FROM df_productos, UNNEST(listaSectores) AS t(s)
         WHERE t.s.nombre IN ({sector_list}) AND t.s.porcent >= {threshold}
@@ -179,7 +183,9 @@ def get_sector_columns_sql(sectores: list[str]):
     for s in sectores:
         escaped = s.replace("'", "''")
         alias = s.replace("'", "")
-        parts.append(f"    COALESCE(SUM(t.s.porcent) FILTER (WHERE t.s.nombre = '{escaped}'), 0) AS \"{alias} %\",")
+        parts.append(
+            f"    COALESCE(SUM(t.s.porcent) FILTER (WHERE t.s.nombre = '{escaped}'), 0) AS \"{alias} %\","
+        )
     return "\n".join(parts)
 
 
@@ -248,7 +254,7 @@ df = duckdb.query(query).df()
 tabla = st.dataframe(
     df,
     # height=800,
-    width='stretch',
+    width="stretch",
     hide_index=True,
     on_select="rerun",
     selection_mode="single-row",
@@ -332,7 +338,11 @@ def render_composiciones(producto):
             for comp in composiciones
         ]
     )
-    st.dataframe(composiciones_df, hide_index=True, width='stretch',)
+    st.dataframe(
+        composiciones_df,
+        hide_index=True,
+        width="stretch",
+    )
 
 
 def render_sectores(producto):
@@ -500,7 +510,7 @@ def render_rentabilidad(producto):
             .properties(title="Rentabilidad histórica")
         )
         with cols[0]:
-            st.altair_chart(chart, width='stretch')
+            st.altair_chart(chart, width="stretch")
 
     # now, same with YearUno, YearTres and YearCinco, but as YoY a 1, 3, y 5 años (Year over Year)
     yoy_rentabilidades = []
@@ -530,7 +540,7 @@ def render_rentabilidad(producto):
             .properties(title="Rentabilidad anual a 1, 3 y 5 años")
         )
         with cols[1]:
-            st.altair_chart(chart_yoy, width='stretch')
+            st.altair_chart(chart_yoy, width="stretch")
 
     # Disclaimer
     st.markdown(
