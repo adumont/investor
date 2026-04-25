@@ -1,82 +1,129 @@
 # Investor
 
-Streamlit app for exploring MyInvestor investment products from local snapshot.
+Investor es una aplicación web hecha con Streamlit para explorar productos de inversión de MyInvestor de forma rápida y visual. Su objetivo es ayudarte a filtrar cientos de productos, compararlos y revisar sus detalles clave en una sola pantalla.
 
-## What it does
+## Acceso
 
-App lets user scan, filter, compare, inspect funds and pension products without digging through product PDFs one by one.
+La aplicación está publicada en:
 
-## Features
+https://investor26.streamlit.app/
 
-- Search by product name or ISIN.
-- Quick filters for `World`, `S&P 500`, `Emergentes`, `Japón`, `Small Caps`, `Oro y Metales`, or no preset.
-- Main filters for currency, product type, and manager.
-- Advanced filters for:
-  - category
-  - MyInvestor category
-  - Morningstar category
-  - asset type
-  - geographic zone
-  - sector exposure
-- Sector filter supports minimum threshold. Example: show products with at least `20%` in selected sector.
-- Optional sector columns in results table for selected sectors.
-- Optional columns for:
-  - last 6 calendar-year returns including current year YTD
-  - annualized `1Y`, `3Y`, `5Y` returns
-  - category fields
-  - subscription and redemption settlement lag days
-- Results include `TE_1Y`: tracking error over 1 year (`trackingErrorYearUno`).
-- Results table sorted by risk first, then TER.
-- Single-row selection. Pick product from table to open full detail panel.
-- Auto-open product detail when only 1 result remains.
-- Product detail view includes:
-  - name, ISIN, asset type, risk indicator
-  - description
-  - links to factsheet, KIID, semiannual report, memory/report docs, Morningstar
-  - historical return charts
-  - general metadata table
-  - fee table with TER highlighted
-  - sector breakdown
-  - region breakdown
-  - composition/holdings table when available
-  - raw JSON payload for full inspection
-- Data cached for 6 hours to keep UI fast.
+No necesitas instalación para usarla desde navegador.
 
-## Data source
+## Para qué sirve
 
-- App reads local file `myinvestor.json`.
-- Current snapshot in repo dated `22/04/2026`.
-- Only products with status `OPEN` appear in results.
+Esta herramienta está pensada para usuarios que quieren analizar productos antes de invertir, sin tener que abrir manualmente fichas y documentos de cada fondo.
 
-## What user sees first
+Con Investor puedes:
 
-- Table of products.
-- Default filters: currency `EUR`, product type `FONDOS_INDEXADOS`.
-- SQL query used for current view in expandable block.
-- Detail panel after row selection.
+- buscar productos por nombre o por ISIN,
+- aplicar filtros combinados para acotar resultados,
+- comparar riesgo, TER y rentabilidades,
+- inspeccionar sectores, regiones y comisiones,
+- abrir documentación oficial desde la propia ficha del producto.
 
-## How to use
+## Funcionalidades principales
 
-App is live at: https://investor26.streamlit.app/
+### 1. Búsqueda rápida
 
-### Work with results
+- Búsqueda por texto sobre el nombre del producto.
+- Búsqueda directa por código ISIN.
 
-1. Type part of product name or ISIN in search box.
-2. Add quick filter or advanced filters.
-3. Toggle extra columns if needed.
-4. Click row in table.
-5. Review charts, fees, sectors, regions, and raw product payload.
+### 2. Filtros rápidos temáticos
 
-## Typical uses
+Incluye accesos rápidos para estrategias comunes:
 
-- Find low-risk or low-TER products fast.
-- Narrow list to one geography, category, manager, or currency.
-- Check sector concentration before buying.
-- Compare historical returns across candidate products.
-- Open product documents from one place.
+- World
+- S&P 500
+- Emergentes
+- Japón
+- Small Caps
+- Oro y Metales
+- Cualquiera (sin filtro rápido)
 
-## Notes
+### 3. Filtros principales
 
-- This is exploration tool, not execution platform.
-- Returns shown are historical. They do not guarantee future returns.
-- Data freshness depends on `myinvestor.json` snapshot, not live API calls in current setup.
+- Divisa
+- Tipo de producto
+- Gestora
+
+La vista inicial usa por defecto:
+
+- divisa EUR
+- tipo de producto FONDOS_INDEXADOS
+
+### 4. Filtros avanzados
+
+En el bloque "Más filtros & Selección de columnas" puedes filtrar por:
+
+- categoría,
+- categoría MyInvestor,
+- categoría Morningstar,
+- tipo de activo,
+- zona geográfica,
+- sector.
+
+El filtro por sector permite definir un umbral mínimo en porcentaje (por ejemplo, mostrar solo productos con al menos 20% en un sector concreto).
+
+### 5. Personalización de columnas
+
+Puedes mostrar u ocultar columnas para adaptar la tabla a tu análisis:
+
+- rentabilidad de los últimos años (incluido YTD),
+- rentabilidad anualizada a 1, 3 y 5 años,
+- categorías,
+- días de desplazamiento de suscripción y reembolso,
+- columnas de sectores seleccionados.
+
+Además, la tabla incluye `TE_1Y`, que corresponde al tracking error a 1 año (`trackingErrorYearUno`).
+
+### 6. Tabla de resultados y ordenación
+
+- Los resultados muestran solo productos con estado OPEN.
+- La ordenación principal es por riesgo y después por TER.
+- La selección es por fila única para abrir el detalle del producto.
+- Si queda un único resultado, el detalle se abre automáticamente.
+
+### 7. Vista de detalle del producto
+
+Al seleccionar un producto, se muestra una ficha completa con:
+
+- nombre, ISIN, tipo de activo e indicador de riesgo,
+- descripción (si está disponible),
+- enlaces a documentos (ficha técnica, KIID, informe semestral, memoria, Morningstar),
+- gráficos de rentabilidad histórica,
+- tabla de datos generales,
+- tabla de comisiones con TER destacado,
+- desglose por sectores,
+- desglose por regiones,
+- composiciones/posiciones del fondo cuando existan,
+- JSON completo del producto para inspección avanzada.
+
+## Guía de uso paso a paso
+
+1. Abre la aplicación en el enlace público.
+2. Escribe un nombre o ISIN en el buscador.
+3. Aplica filtros rápidos o avanzados según tu objetivo.
+4. Activa las columnas que quieras comparar.
+5. Haz clic en un producto de la tabla.
+6. Revisa su detalle, documentación y métricas.
+
+## Casos de uso frecuentes
+
+- Encontrar opciones con menor riesgo o menor TER.
+- Comparar productos similares dentro de una misma categoría.
+- Filtrar por geografía o por tipo de activo.
+- Revisar concentración sectorial antes de tomar decisión.
+- Comprobar tracking error, comisiones y consistencia de rentabilidades.
+
+## Fuente de datos y actualización
+
+- La aplicación trabaja con un snapshot local de datos.
+- En esta versión, el listado corresponde a la foto del 22/04/2026.
+- Para mejorar rendimiento, los datos se cachean durante 6 horas.
+
+## Importante
+
+- Esta aplicación es una herramienta de exploración y análisis, no una plataforma de ejecución de órdenes.
+- Las rentabilidades pasadas no garantizan rentabilidades futuras.
+- Invertir en fondos conlleva riesgo de pérdida de capital.
