@@ -123,7 +123,7 @@ with st.expander("Más filtros & Selección de columnas", expanded=False):
         )
 
     with st.container():
-        cols = st.columns([2, 1])
+        cols = st.columns([2, 1, 1])
         selected_sector = cols[0].multiselect(
             "Filtro por sector (al menos uno debe cumplir el umbral)",
             options=SECTORES,
@@ -138,6 +138,11 @@ with st.expander("Más filtros & Selección de columnas", expanded=False):
         )
         if selected_sector:
             st.session_state.threshold_sector_saved = threshold_sector
+        show_sectores = cols[2].toggle(
+            "Mostrar sector(es) seleccionados",
+            value=False,
+            disabled=not selected_sector,
+        )
 
 
 def get_filtro_sql(field: str, options: list[str]):
@@ -167,6 +172,20 @@ def get_filtro_sector_sql(sectores: list[str], threshold: float):
     )"""
 
 
+def get_sector_columns_sql(sectores: list[str]):
+    if not sectores:
+        return ""
+    parts = []
+    for s in sectores:
+        escaped = s.replace("'", "''")
+        alias = s.replace("'", "")
+        parts.append(f"    COALESCE(SUM(t.s.porcent) FILTER (WHERE t.s.nombre = '{escaped}'), 0) AS \"{alias} %\",")
+    return "\n".join(parts)
+
+
+_sector_cols = get_sector_columns_sql(selected_sector) if show_sectores else ""
+_use_unnest = show_sectores and bool(selected_sector)
+
 query = f"""
 SELECT 
     codigoIsin,
@@ -186,10 +205,10 @@ SELECT
     { "" if show_categories else "-- " }categoria, categoriaMyInvestor, categoriaMstar,
     trackingErrorYearUno as TE_1Y,
     entidadGestora as Gestora,
-    divisasDto.codigo AS divisa,
-    -- zonaGeografica,
-    -- tipoProductoEnum
+    divisasDto.codigo AS divisa
+    {("," + _sector_cols) if _sector_cols else ""}
 FROM df_productos
+    {"LEFT JOIN UNNEST(listaSectores) AS t(s) ON TRUE" if _use_unnest else ""}
 WHERE
     ( codigoIsin ILIKE '%{filter_name}%' OR -- filtro por ISIN
         nombre ILIKE '%{filter_name}%' ) -- filtro por nombre
@@ -204,6 +223,7 @@ WHERE
     AND ( {get_filtro_sql("tipoActivo", selected_tipo_activo)} ) -- filtro tipo de activo
     AND ( {get_filtro_sector_sql(selected_sector, threshold_sector)} ) -- filtro sector
     AND status = 'OPEN'
+{ "GROUP BY codigoIsin, nombre, indicadorRiesgo, ter, ytd, rentabilidadPasadaUno, rentabilidadPasadaDos, rentabilidadPasadaTres, rentabilidadPasadaCuatro, rentabilidadPasadaCinco, yearUno, yearTres, yearCinco, diasDesplazamientoSuscripcion, diasDesplazamientoReembolso, categoria, categoriaMyInvestor, categoriaMstar, trackingErrorYearUno, entidadGestora, divisasDto" if _use_unnest else "" }
 ORDER BY indicadorRiesgo ASC, ter ASC
 """
 
