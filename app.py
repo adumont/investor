@@ -230,7 +230,7 @@ WHERE
     AND ( {get_filtro_sector_sql(selected_sector, threshold_sector)} ) -- filtro sector
     AND status = 'OPEN'
 { "GROUP BY codigoIsin, nombre, indicadorRiesgo, ter, ytd, rentabilidadPasadaUno, rentabilidadPasadaDos, rentabilidadPasadaTres, rentabilidadPasadaCuatro, rentabilidadPasadaCinco, yearUno, yearTres, yearCinco, diasDesplazamientoSuscripcion, diasDesplazamientoReembolso, categoria, categoriaMyInvestor, categoriaMstar, trackingErrorYearUno, entidadGestora, divisasDto" if _use_unnest else "" }
-ORDER BY indicadorRiesgo ASC, ter ASC
+ORDER BY indicadorRiesgo ASC, ter ASC, codigoIsin ASC
 """
 
 # query=f"""
@@ -256,6 +256,7 @@ tabla = st.dataframe(
     # height=800,
     width="stretch",
     hide_index=True,
+    key="productos_table",
     on_select="rerun",
     selection_mode="single-row",
 )
