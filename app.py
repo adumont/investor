@@ -253,15 +253,19 @@ with st.expander("Consulta SQL"):
     st.code(query)
 
 df = duckdb.query(query).df()
-tabla = st.dataframe(
-    df,
-    # height=800,
-    width="stretch",
-    hide_index=True,
-    key="productos_table",
-    on_select="rerun",
-    selection_mode="single-row",
-)
+if df.empty:
+    st.error("No hay productos que correspondan a esos filtros.")
+    tabla = {"selection": {"rows": []}}
+else:
+    tabla = st.dataframe(
+        df,
+        # height=800,
+        width="stretch",
+        hide_index=True,
+        key="productos_table",
+        on_select="rerun",
+        selection_mode="single-row",
+    )
 
 selected_rows = tabla.get("selection", {}).get("rows", [])
 
