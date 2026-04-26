@@ -120,7 +120,7 @@ with st.expander("Más filtros & Selección de columnas", expanded=False):
         )
 
     with st.container():
-        cols = st.columns(3)
+        cols = st.columns(4)
         show_rentabilidad_anios = cols[0].toggle(
             "Mostrar rentabilidad ultimos 6 años", value=True
         )
@@ -128,7 +128,8 @@ with st.expander("Más filtros & Selección de columnas", expanded=False):
             "Mostrar rentabilidad media a 1,3,5 años", value=True
         )
         show_categories = cols[1].toggle("Mostrar categorias", value=False)
-        show_dias_desplazamiento = cols[2].toggle(
+        show_volatilidad = cols[2].toggle("Mostrar datos Volatilidad", value=False)
+        show_dias_desplazamiento = cols[3].toggle(
             "Mostrar días desplazamiento suscripción y reembolso", value=False
         )
 
@@ -151,7 +152,6 @@ with st.expander("Más filtros & Selección de columnas", expanded=False):
             value=False,
             disabled=not selected_sector,
         )
-
 
 def get_filtro_sql(field: str, options: list[str]):
     if not options or "Cualquiera" in options:
@@ -213,6 +213,10 @@ SELECT
     { "" if show_rentabilidad_media_135 else "-- " }yearUno as "1Y",
     { "" if show_rentabilidad_media_135 else "-- " }yearTres as "3Y",
     { "" if show_rentabilidad_media_135 else "-- " }yearCinco as "5Y",
+    { "" if show_volatilidad else "-- " }volatilidad as "Volatilidad",
+    { "" if show_volatilidad else "-- " }volatilidadYearUno as "Vol 1Y",
+    { "" if show_volatilidad else "-- " }volatilidadYearTres as "Vol 3Y",
+    { "" if show_volatilidad else "-- " }volatilidadYearCinco as "Vol 5Y",
     { "" if show_dias_desplazamiento else "-- " }diasDesplazamientoSuscripcion DiasS, diasDesplazamientoReembolso DiasR,
     { "" if show_categories else "-- " }categoria, categoriaMyInvestor, categoriaMstar,
     trackingErrorYearUno as TE_1Y,
@@ -234,7 +238,7 @@ WHERE
     AND ( {get_filtro_sql("tipoActivo", selected_tipo_activo)} ) -- filtro tipo de activo
     AND ( {get_filtro_sector_sql(selected_sector, threshold_sector)} ) -- filtro sector
     AND status = 'OPEN'
-{ "GROUP BY codigoIsin, nombre, indicadorRiesgo, ter, ytd, rentabilidadPasadaUno, rentabilidadPasadaDos, rentabilidadPasadaTres, rentabilidadPasadaCuatro, rentabilidadPasadaCinco, yearUno, yearTres, yearCinco, diasDesplazamientoSuscripcion, diasDesplazamientoReembolso, categoria, categoriaMyInvestor, categoriaMstar, trackingErrorYearUno, entidadGestora, divisasDto" if _use_unnest else "" }
+{ "GROUP BY codigoIsin, nombre, indicadorRiesgo, ter, ytd, rentabilidadPasadaUno, rentabilidadPasadaDos, rentabilidadPasadaTres, rentabilidadPasadaCuatro, rentabilidadPasadaCinco, yearUno, yearTres, yearCinco, volatilidad, volatilidadYearUno, volatilidadYearTres, volatilidadYearCinco, diasDesplazamientoSuscripcion, diasDesplazamientoReembolso, categoria, categoriaMyInvestor, categoriaMstar, trackingErrorYearUno, entidadGestora, divisasDto" if _use_unnest else "" }
 ORDER BY indicadorRiesgo ASC, ter ASC, codigoIsin ASC
 """
 
