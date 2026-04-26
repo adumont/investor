@@ -14,6 +14,9 @@ from productos import (
     get_df_productos,
     get_listas_opciones,
 )
+from recommendador import recommend_mix, RecommendationError
+from simulacion import build_simulation
+from explicabilidad import build_recommendation_explanation
 
 load_dotenv()
 
@@ -554,6 +557,172 @@ def render_rentabilidad(producto):
         "<small>:grey[Rentabilidades pasadas no garantizan rentabilidades futuras. Invertir en fondos conlleva riesgo de pérdida de capital.]</small>",
         unsafe_allow_html=True,
     )
+
+
+def format_percent_from_decimal(value):
+    return f"{value * 100:.2f}%"
+
+
+with st.expander("Asesor MIX (beta)", expanded=False):
+    if df.empty:
+        st.info("No hay productos disponibles para construir mix.")
+    else:
+        options_map = {
+            f"{row['codigoIsin']} - {row['nombre']}": row["codigoIsin"]
+            for _, row in df[["codigoIsin", "nombre"]].drop_duplicates().iterrows()
+        }
+
+        default_mix_isins = []
+        selected_mix_labels = st.multiselect(
+            "Selecciona ISIN para el mix",
+            options=list(options_map.keys()),
+            default=[
+                label
+                for label, isin in options_map.items()
+                if isin in default_mix_isins
+            ],
+        )
+        selected_mix_isins = [options_map[label] for label in selected_mix_labels]
+
+        cols_mix = st.columns(3)
+        horizon_years = cols_mix[0].number_input(
+            "Horizonte (años)", min_value=1, max_value=30, value=5, step=1
+        )
+        min_weight_pct = cols_mix[1].slider(
+            "Peso mínimo por fondo (%)",
+            min_value=1,
+            max_value=20,
+            value=5,
+            step=1,
+        )
+        risk_aversion = cols_mix[2].slider(
+            "Penalización por riesgo",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.35,
+            step=0.05,
+        )
+
+        if selected_mix_isins:
+            try:
+                recommendation = recommend_mix(
+                    productos_lista,
+                    selected_mix_isins,
+                    int(horizon_years),
+                    min_weight=min_weight_pct / 100.0,
+                    risk_aversion=float(risk_aversion),
+                )
+
+                simulation = build_simulation(recommendation, int(horizon_years))
+                explanation_md = build_recommendation_explanation(recommendation)
+
+                portfolio = recommendation["portfolio"]
+                metric_cols = st.columns(4)
+                metric_cols[0].metric(
+                    "Rentabilidad neta esperada",
+                    format_percent_from_decimal(portfolio["net_expected"]),
+                )
+                metric_cols[1].metric(
+                    "TER agregado",
+                    format_percent_from_decimal(portfolio["ter_drag"]),
+                )
+                metric_cols[2].metric(
+                    "Volatilidad proxy",
+                    format_percent_from_decimal(portfolio["volatility_proxy"]),
+                )
+                metric_cols[3].metric(
+                    "Horizonte usado",
+                    f"{recommendation['horizon_bucket']}Y",
+                )
+
+                st.subheader("Asignación recomendada")
+                allocations_df = pd.DataFrame(recommendation["allocations"])
+                allocations_view = allocations_df[
+                    [
+                        "isin",
+                        "nombre",
+                        "weight",
+                        "expected_return",
+                        "ter",
+                        "volatility",
+                        "raw_score",
+                    ]
+                ].rename(
+                    columns={
+                        "isin": "ISIN",
+                        "nombre": "Nombre",
+                        "weight": "Peso",
+                        "expected_return": "Rentabilidad esperada",
+                        "ter": "TER",
+                        "volatility": "Volatilidad",
+                        "raw_score": "Score",
+                    }
+                )
+                for col in ["Peso", "Rentabilidad esperada", "TER", "Volatilidad"]:
+                    allocations_view[col] = allocations_view[col].map(
+                        format_percent_from_decimal
+                    )
+                st.dataframe(allocations_view, hide_index=True, width="stretch")
+
+                st.subheader("Explicación de recomendación")
+                st.markdown(explanation_md)
+
+                st.subheader("Simulación de escenarios")
+                sim_paths_df = pd.DataFrame(simulation["paths"])
+                if not sim_paths_df.empty:
+                    scenario_chart = (
+                        alt.Chart(sim_paths_df)
+                        .mark_line(point=True)
+                        .encode(
+                            x=alt.X("year:O", title="Año"),
+                            y=alt.Y(
+                                "cumulative_return:Q",
+                                title="Rentabilidad acumulada",
+                                axis=alt.Axis(format=".0%"),
+                            ),
+                            color=alt.Color("scenario:N", title="Escenario"),
+                            tooltip=[
+                                "scenario",
+                                "year",
+                                alt.Tooltip("annual_return:Q", format=".2%"),
+                                alt.Tooltip("cumulative_return:Q", format=".2%"),
+                            ],
+                        )
+                    )
+                    st.altair_chart(scenario_chart, width="stretch")
+
+                historical_proxy_df = pd.DataFrame(simulation["historical_proxy"])
+                if not historical_proxy_df.empty:
+                    st.caption("Trayectoria proxy histórica (años disponibles)")
+                    historical_chart = (
+                        alt.Chart(historical_proxy_df)
+                        .mark_line(point=True, color="#1f77b4")
+                        .encode(
+                            x=alt.X("year_index:O", title="Indice anual histórico"),
+                            y=alt.Y(
+                                "cumulative_return:Q",
+                                title="Rentabilidad acumulada",
+                                axis=alt.Axis(format=".0%"),
+                            ),
+                            tooltip=[
+                                "year_index",
+                                alt.Tooltip("coverage_weight:Q", format=".0%"),
+                                alt.Tooltip("annual_return:Q", format=".2%"),
+                                alt.Tooltip("cumulative_return:Q", format=".2%"),
+                            ],
+                        )
+                    )
+                    st.altair_chart(historical_chart, width="stretch")
+
+                if recommendation["excluded"]:
+                    excluded_df = pd.DataFrame(recommendation["excluded"])
+                    st.warning("Algunos productos fueron excluidos por datos incompletos.")
+                    st.dataframe(excluded_df, hide_index=True, width="stretch")
+
+            except RecommendationError as err:
+                st.error(f"No se pudo calcular recomendación: {err}")
+        else:
+            st.info("Selecciona uno o más ISIN para calcular mix recomendado.")
 
 
 selected_row_index = selected_rows[0] if selected_rows else None

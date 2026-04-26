@@ -100,6 +100,38 @@ Al seleccionar un producto, se muestra una ficha completa con:
 - composiciones/posiciones del fondo cuando existan,
 - JSON completo del producto para inspección avanzada.
 
+### 8. Asesor MIX (beta)
+
+La app incluye un motor de recomendación de mix para una selección manual de ISIN.
+
+Qué hace:
+
+- optimiza pesos entre los ISIN seleccionados,
+- aplica restricciones long-only,
+- fuerza suma de pesos al 100%,
+- aplica peso mínimo por fondo,
+- descuenta TER anual,
+- penaliza volatilidad para priorizar rentabilidad ajustada por riesgo.
+
+Parámetros principales:
+
+- horizonte en años,
+- peso mínimo por fondo,
+- intensidad de penalización por riesgo.
+
+Reglas actuales:
+
+- universo limitado a ISIN seleccionados por el usuario,
+- para horizonte no exacto (1/3/5), se usa el horizonte inferior más cercano,
+- productos sin datos mínimos se excluyen y se informa motivo.
+
+Salida del asesor:
+
+- asignación recomendada por ISIN,
+- explicación de decisión (impacto retorno, TER y riesgo),
+- simulación por escenarios (conservador, base, optimista),
+- trayectoria proxy histórica con años disponibles.
+
 ## Guía de uso paso a paso
 
 1. Abre la aplicación en el enlace público.
@@ -128,3 +160,4 @@ Al seleccionar un producto, se muestra una ficha completa con:
 - Esta aplicación es una herramienta de exploración y análisis, no una plataforma de ejecución de órdenes.
 - Las rentabilidades pasadas no garantizan rentabilidades futuras.
 - Invertir en fondos conlleva riesgo de pérdida de capital.
+- La simulación del Asesor MIX es una aproximación basada en estadísticas históricas agregadas disponibles; no equivale a backtest completo con serie temporal de mercado.
