@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from os import getenv
 import datetime
 
-from vars import CACHE_TTL
+from vars import CACHE_TTL, LOCAL_FILE_TIMESTAMP
 
 from productos import (
     get_productos,
@@ -48,7 +48,7 @@ FILTROS_RAPIDOS = {
     "Oro y Metales": "categoriaMstar = 'RV Sector Oro y Metales preciosos' OR categoria = 'Precious Metals Sector Equity'",
 }
 
-productos_lista = get_productos()
+(timestamp_products, productos_lista) = get_productos()
 
 df_productos = get_df_productos(productos_lista)
 
@@ -603,7 +603,14 @@ st.markdown(
     "<small>:red-badge[:material/warning: Aviso] Rentabilidades pasadas no garantizan rentabilidades futuras. Invertir en fondos conlleva riesgo de pérdida de capital.</small>",
     unsafe_allow_html=True,
 )
-st.markdown(
-    "<small>:orange-badge[:material/warning: Aviso] El listado de productos es una *foto* del 26/04/2026.</small>",
-    unsafe_allow_html=True,
-)
+
+if timestamp_products == LOCAL_FILE_TIMESTAMP:
+    st.markdown(
+        f"<small>:orange-badge[:material/warning: Aviso] El listado de productos es una *foto* del {timestamp_products}.</small>",
+        unsafe_allow_html=True,
+    )
+else:
+    st.markdown(
+        f"<small>:green-badge[:material/check: Actualizado] El listado de productos es una *foto actualizada* el {timestamp_products}.</small>",
+        unsafe_allow_html=True,
+    )

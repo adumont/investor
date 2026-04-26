@@ -18,7 +18,19 @@ def read_json_from_file(filename):
 
 @cache_data(show_spinner="Descargando datos...", ttl=CACHE_TTL)
 def get_productos():
-    return read_json_from_file("myinvestor.json")
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    date_time = datetime.now(ZoneInfo("Europe/Madrid")).strftime("%d/%m/%Y %H:%M (%Z)")
+    try:
+        productos=download_json_from_url("https://api.myinvestor.es/myinvestor-server/rest/public/fondos/find-fondos?tipo=TODOS&token=a2e8e18ad26a079c576038f0ad4fa18ce0d9e415f5bf6f43f89cf3831a0e4685__")
+        print(f"Datos descargados correctamente, {len(productos)} productos, fecha y hora de descarga: {date_time}")
+        return (date_time, productos)
+    except Exception as e:
+        print(f"Error al descargar datos: {e} - leyendo desde archivo local...")
+
+    from vars import LOCAL_FILE, LOCAL_FILE_TIMESTAMP
+    return (LOCAL_FILE_TIMESTAMP, read_json_from_file(LOCAL_FILE))
 
 
 def get_df_productos(productos):
