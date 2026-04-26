@@ -71,9 +71,14 @@ filter_name = cols[1].text_input(
     value="",
     placeholder="Ejemplo: world, FR0000978371...",
 )
-filter_name = filter_name.strip().replace(
-    "'", "''"
-)  # escape single quotes for SQL query
+filter_name = filter_name.strip()
+_filter_terms = [t.strip().replace("'", "''") for t in filter_name.split(",") if t.strip()]
+if not _filter_terms:
+    _filter_name_sql = "1=1"
+else:
+    _filter_name_sql = " OR ".join(
+        f"codigoIsin ILIKE '%{t}%' OR nombre ILIKE '%{t}%'" for t in _filter_terms
+    )
 
 cols = st.columns(4)
 selected_filter = cols[0].selectbox(
@@ -214,8 +219,7 @@ SELECT
 FROM df_productos
     {"LEFT JOIN UNNEST(listaSectores) AS t(s) ON TRUE" if _use_unnest else ""}
 WHERE
-    ( codigoIsin ILIKE '%{filter_name}%' OR -- filtro por ISIN
-        nombre ILIKE '%{filter_name}%' ) -- filtro por nombre
+    ( {_filter_name_sql} ) -- filtro por nombre/ISIN
     AND ( {FILTROS_RAPIDOS[selected_filter]} ) -- filtro 
     AND ( {get_filtro_sql("divisa", selected_divisa)} ) -- filtro divisa
     AND ( {get_filtro_sql("zonaGeografica", selected_zona)} ) -- filtro zona geográfica

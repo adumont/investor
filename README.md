@@ -28,6 +28,7 @@ Con Investor puedes:
 
 - Búsqueda por texto sobre el nombre del producto.
 - Búsqueda directa por código ISIN.
+- Puedes introducir **varios términos separados por coma** para buscar múltiples productos a la vez (por ejemplo: `IE000ZYRH0Q7, IE00BYX5NX33`). Cada término se trata como un OR independiente sobre nombre e ISIN.
 
 ### 2. Filtros rápidos temáticos
 
