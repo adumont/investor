@@ -213,7 +213,6 @@ SELECT
     { "" if show_rentabilidad_media_135 else "-- " }yearUno as "1Y",
     { "" if show_rentabilidad_media_135 else "-- " }yearTres as "3Y",
     { "" if show_rentabilidad_media_135 else "-- " }yearCinco as "5Y",
-    { "" if show_volatilidad else "-- " }volatilidad as "Volatilidad",
     { "" if show_volatilidad else "-- " }volatilidadYearUno as "Vol 1Y",
     { "" if show_volatilidad else "-- " }volatilidadYearTres as "Vol 3Y",
     { "" if show_volatilidad else "-- " }volatilidadYearCinco as "Vol 5Y",
@@ -238,7 +237,7 @@ WHERE
     AND ( {get_filtro_sql("tipoActivo", selected_tipo_activo)} ) -- filtro tipo de activo
     AND ( {get_filtro_sector_sql(selected_sector, threshold_sector)} ) -- filtro sector
     AND status = 'OPEN'
-{ "GROUP BY codigoIsin, nombre, indicadorRiesgo, ter, ytd, rentabilidadPasadaUno, rentabilidadPasadaDos, rentabilidadPasadaTres, rentabilidadPasadaCuatro, rentabilidadPasadaCinco, yearUno, yearTres, yearCinco, volatilidad, volatilidadYearUno, volatilidadYearTres, volatilidadYearCinco, diasDesplazamientoSuscripcion, diasDesplazamientoReembolso, categoria, categoriaMyInvestor, categoriaMstar, trackingErrorYearUno, entidadGestora, divisasDto" if _use_unnest else "" }
+{ "GROUP BY codigoIsin, nombre, indicadorRiesgo, ter, ytd, rentabilidadPasadaUno, rentabilidadPasadaDos, rentabilidadPasadaTres, rentabilidadPasadaCuatro, rentabilidadPasadaCinco, yearUno, yearTres, yearCinco, volatilidadYearUno, volatilidadYearTres, volatilidadYearCinco, diasDesplazamientoSuscripcion, diasDesplazamientoReembolso, categoria, categoriaMyInvestor, categoriaMstar, trackingErrorYearUno, entidadGestora, divisasDto" if _use_unnest else "" }
 ORDER BY indicadorRiesgo ASC, ter ASC, codigoIsin ASC
 """
 
