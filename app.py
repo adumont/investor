@@ -75,7 +75,9 @@ filter_name = cols[1].text_input(
     placeholder="Ejemplo: world, FR0000978371...",
 )
 filter_name = filter_name.strip()
-_filter_terms = [t.strip().replace("'", "''") for t in filter_name.split(",") if t.strip()]
+_filter_terms = [
+    t.strip().replace("'", "''") for t in filter_name.split(",") if t.strip()
+]
 if not _filter_terms:
     _filter_name_sql = "1=1"
 else:
@@ -98,6 +100,49 @@ selected_producto = cols[2].multiselect(
 selected_gestora = cols[3].multiselect("Filtro por gestora:", options=list(GESTORAS))
 
 year = datetime.date.today().year
+
+
+def get_filtro_sql(field: str, options: list[str]):
+    if not options or "Cualquiera" in options:
+        return "1=1"
+    return (
+        field
+        + " IN ("
+        + ", ".join(
+            [
+                f"""'{opt.replace("'", "''")}'"""
+                for opt in options
+                if opt != "Cualquiera"
+            ]
+        )
+        + ")"
+    )
+
+
+def get_filtro_sector_sql(sectores: list[str], threshold: float):
+    if not sectores:
+        return "1=1"
+    sector_list = ", ".join(
+        f"'{s.replace(chr(39), chr(39)+chr(39))}'" for s in sectores
+    )
+    return f"""codigoIsin IN (
+        SELECT codigoIsin FROM df_productos, UNNEST(listaSectores) AS t(s)
+        WHERE t.s.nombre IN ({sector_list}) AND t.s.porcent >= {threshold}
+    )"""
+
+
+def get_sector_columns_sql(sectores: list[str]):
+    if not sectores:
+        return ""
+    parts = []
+    for s in sectores:
+        escaped = s.replace("'", "''")
+        alias = s.replace("'", "")
+        parts.append(
+            f"    COALESCE(SUM(t.s.porcent) FILTER (WHERE t.s.nombre = '{escaped}'), 0) AS \"{alias} %\","
+        )
+    return "\n".join(parts)
+
 
 with st.expander("Más filtros & Selección de columnas", expanded=False):
     with st.container():
@@ -153,110 +198,68 @@ with st.expander("Más filtros & Selección de columnas", expanded=False):
             disabled=not selected_sector,
         )
 
-def get_filtro_sql(field: str, options: list[str]):
-    if not options or "Cualquiera" in options:
-        return "1=1"
-    return (
-        field
-        + " IN ("
-        + ", ".join(
-            [
-                f"""'{opt.replace("'", "''")}'"""
-                for opt in options
-                if opt != "Cualquiera"
-            ]
-        )
-        + ")"
-    )
+    _sector_cols = get_sector_columns_sql(selected_sector) if show_sectores else ""
+    _use_unnest = show_sectores and bool(selected_sector)
 
+    query = f"""
+    SELECT 
+        codigoIsin,
+        nombre,
+        indicadorRiesgo as Risk,
+        ter as TER,
+        ytd as "{ year }",
+        { "" if show_rentabilidad_anios else "-- " }rentabilidadPasadaUno as "{ year - 1 }",
+        { "" if show_rentabilidad_anios else "-- " }rentabilidadPasadaDos as "{ year - 2 }",
+        { "" if show_rentabilidad_anios else "-- " }rentabilidadPasadaTres as "{ year - 3 }",
+        { "" if show_rentabilidad_anios else "-- " }rentabilidadPasadaCuatro as "{ year - 4 }",
+        { "" if show_rentabilidad_anios else "-- " }rentabilidadPasadaCinco as "{ year - 5 }",
+        { "" if show_rentabilidad_media_135 else "-- " }yearUno as "1Y",
+        { "" if show_rentabilidad_media_135 else "-- " }yearTres as "3Y",
+        { "" if show_rentabilidad_media_135 else "-- " }yearCinco as "5Y",
+        { "" if show_volatilidad else "-- " }volatilidadYearUno as "Vol 1Y",
+        { "" if show_volatilidad else "-- " }volatilidadYearTres as "Vol 3Y",
+        { "" if show_volatilidad else "-- " }volatilidadYearCinco as "Vol 5Y",
+        { "" if show_dias_desplazamiento else "-- " }diasDesplazamientoSuscripcion DiasS, diasDesplazamientoReembolso DiasR,
+        { "" if show_categories else "-- " }categoria, categoriaMyInvestor, categoriaMstar,
+        trackingErrorYearUno as TE_1Y,
+        entidadGestora as Gestora,
+        divisasDto.codigo AS divisa
+        {("," + _sector_cols) if _sector_cols else ""}
+    FROM df_productos
+        {"LEFT JOIN UNNEST(listaSectores) AS t(s) ON TRUE" if _use_unnest else ""}
+    WHERE
+        ( {_filter_name_sql} ) -- filtro por nombre/ISIN
+        AND ( {FILTROS_RAPIDOS[selected_filter]} ) -- filtro 
+        AND ( {get_filtro_sql("divisa", selected_divisa)} ) -- filtro divisa
+        AND ( {get_filtro_sql("zonaGeografica", selected_zona)} ) -- filtro zona geográfica
+        AND ( {get_filtro_sql("tipoProductoEnum", selected_producto)} ) -- filtro tipo de producto
+        AND ( {get_filtro_sql("categoria", selected_categoria)} ) -- filtro categoría
+        AND ( {get_filtro_sql("categoriaMstar", selected_categoria_mstar)} ) -- filtro categoría Morningstar
+        AND ( {get_filtro_sql("categoriaMyInvestor", selected_categoria_myinvestor)} ) -- filtro categoría MyInvestor
+        AND ( {get_filtro_sql("entidadGestora", selected_gestora)} ) -- filtro gestora
+        AND ( {get_filtro_sql("tipoActivo", selected_tipo_activo)} ) -- filtro tipo de activo
+        AND ( {get_filtro_sector_sql(selected_sector, threshold_sector)} ) -- filtro sector
+        AND status = 'OPEN'
+    { "GROUP BY codigoIsin, nombre, indicadorRiesgo, ter, ytd, rentabilidadPasadaUno, rentabilidadPasadaDos, rentabilidadPasadaTres, rentabilidadPasadaCuatro, rentabilidadPasadaCinco, yearUno, yearTres, yearCinco, volatilidadYearUno, volatilidadYearTres, volatilidadYearCinco, diasDesplazamientoSuscripcion, diasDesplazamientoReembolso, categoria, categoriaMyInvestor, categoriaMstar, trackingErrorYearUno, entidadGestora, divisasDto" if _use_unnest else "" }
+    ORDER BY indicadorRiesgo ASC, ter ASC, codigoIsin ASC
+    """
 
-def get_filtro_sector_sql(sectores: list[str], threshold: float):
-    if not sectores:
-        return "1=1"
-    sector_list = ", ".join(
-        f"'{s.replace(chr(39), chr(39)+chr(39))}'" for s in sectores
-    )
-    return f"""codigoIsin IN (
-        SELECT codigoIsin FROM df_productos, UNNEST(listaSectores) AS t(s)
-        WHERE t.s.nombre IN ({sector_list}) AND t.s.porcent >= {threshold}
-    )"""
+    # query=f"""
+    # SELECT
+    #     codigoIsin,
+    #     df_productos.nombre,
+    #     indicadorRiesgo,
+    #     COALESCE(SUM(s.sector.porcent) FILTER (WHERE s.sector.nombre = 'Consumo Defensivo'), 0) AS pct_consumo_defensivo,
+    #     COALESCE(SUM(s.sector.porcent) FILTER (WHERE s.sector.nombre = 'Tecnología'), 0) AS pct_tecnologia
+    # FROM df_productos
+    # LEFT JOIN UNNEST(listaSectores) AS s(sector) ON TRUE
+    # WHERE indicadorRiesgo <= 4
+    # GROUP BY codigoIsin, df_productos.nombre, indicadorRiesgo
+    # ORDER BY indicadorRiesgo ASC, df_productos.nombre ASC;
+    # """
 
-
-def get_sector_columns_sql(sectores: list[str]):
-    if not sectores:
-        return ""
-    parts = []
-    for s in sectores:
-        escaped = s.replace("'", "''")
-        alias = s.replace("'", "")
-        parts.append(
-            f"    COALESCE(SUM(t.s.porcent) FILTER (WHERE t.s.nombre = '{escaped}'), 0) AS \"{alias} %\","
-        )
-    return "\n".join(parts)
-
-
-_sector_cols = get_sector_columns_sql(selected_sector) if show_sectores else ""
-_use_unnest = show_sectores and bool(selected_sector)
-
-query = f"""
-SELECT 
-    codigoIsin,
-    nombre,
-    indicadorRiesgo as Risk,
-    ter as TER,
-    ytd as "{ year }",
-    { "" if show_rentabilidad_anios else "-- " }rentabilidadPasadaUno as "{ year - 1 }",
-    { "" if show_rentabilidad_anios else "-- " }rentabilidadPasadaDos as "{ year - 2 }",
-    { "" if show_rentabilidad_anios else "-- " }rentabilidadPasadaTres as "{ year - 3 }",
-    { "" if show_rentabilidad_anios else "-- " }rentabilidadPasadaCuatro as "{ year - 4 }",
-    { "" if show_rentabilidad_anios else "-- " }rentabilidadPasadaCinco as "{ year - 5 }",
-    { "" if show_rentabilidad_media_135 else "-- " }yearUno as "1Y",
-    { "" if show_rentabilidad_media_135 else "-- " }yearTres as "3Y",
-    { "" if show_rentabilidad_media_135 else "-- " }yearCinco as "5Y",
-    { "" if show_volatilidad else "-- " }volatilidadYearUno as "Vol 1Y",
-    { "" if show_volatilidad else "-- " }volatilidadYearTres as "Vol 3Y",
-    { "" if show_volatilidad else "-- " }volatilidadYearCinco as "Vol 5Y",
-    { "" if show_dias_desplazamiento else "-- " }diasDesplazamientoSuscripcion DiasS, diasDesplazamientoReembolso DiasR,
-    { "" if show_categories else "-- " }categoria, categoriaMyInvestor, categoriaMstar,
-    trackingErrorYearUno as TE_1Y,
-    entidadGestora as Gestora,
-    divisasDto.codigo AS divisa
-    {("," + _sector_cols) if _sector_cols else ""}
-FROM df_productos
-    {"LEFT JOIN UNNEST(listaSectores) AS t(s) ON TRUE" if _use_unnest else ""}
-WHERE
-    ( {_filter_name_sql} ) -- filtro por nombre/ISIN
-    AND ( {FILTROS_RAPIDOS[selected_filter]} ) -- filtro 
-    AND ( {get_filtro_sql("divisa", selected_divisa)} ) -- filtro divisa
-    AND ( {get_filtro_sql("zonaGeografica", selected_zona)} ) -- filtro zona geográfica
-    AND ( {get_filtro_sql("tipoProductoEnum", selected_producto)} ) -- filtro tipo de producto
-    AND ( {get_filtro_sql("categoria", selected_categoria)} ) -- filtro categoría
-    AND ( {get_filtro_sql("categoriaMstar", selected_categoria_mstar)} ) -- filtro categoría Morningstar
-    AND ( {get_filtro_sql("categoriaMyInvestor", selected_categoria_myinvestor)} ) -- filtro categoría MyInvestor
-    AND ( {get_filtro_sql("entidadGestora", selected_gestora)} ) -- filtro gestora
-    AND ( {get_filtro_sql("tipoActivo", selected_tipo_activo)} ) -- filtro tipo de activo
-    AND ( {get_filtro_sector_sql(selected_sector, threshold_sector)} ) -- filtro sector
-    AND status = 'OPEN'
-{ "GROUP BY codigoIsin, nombre, indicadorRiesgo, ter, ytd, rentabilidadPasadaUno, rentabilidadPasadaDos, rentabilidadPasadaTres, rentabilidadPasadaCuatro, rentabilidadPasadaCinco, yearUno, yearTres, yearCinco, volatilidadYearUno, volatilidadYearTres, volatilidadYearCinco, diasDesplazamientoSuscripcion, diasDesplazamientoReembolso, categoria, categoriaMyInvestor, categoriaMstar, trackingErrorYearUno, entidadGestora, divisasDto" if _use_unnest else "" }
-ORDER BY indicadorRiesgo ASC, ter ASC, codigoIsin ASC
-"""
-
-# query=f"""
-# SELECT
-#     codigoIsin,
-#     df_productos.nombre,
-#     indicadorRiesgo,
-#     COALESCE(SUM(s.sector.porcent) FILTER (WHERE s.sector.nombre = 'Consumo Defensivo'), 0) AS pct_consumo_defensivo,
-#     COALESCE(SUM(s.sector.porcent) FILTER (WHERE s.sector.nombre = 'Tecnología'), 0) AS pct_tecnologia
-# FROM df_productos
-# LEFT JOIN UNNEST(listaSectores) AS s(sector) ON TRUE
-# WHERE indicadorRiesgo <= 4
-# GROUP BY codigoIsin, df_productos.nombre, indicadorRiesgo
-# ORDER BY indicadorRiesgo ASC, df_productos.nombre ASC;
-# """
-
-with st.expander("Consulta SQL"):
-    st.code(query)
+    with st.expander("Consulta SQL"):
+        st.code(query)
 
 df = duckdb.query(query).df()
 if df.empty:
@@ -566,6 +569,56 @@ def format_percent_from_decimal(value):
     return f"{value * 100:.2f}%"
 
 
+selected_row_index = selected_rows[0] if selected_rows else None
+if selected_row_index is not None and 0 <= selected_row_index < len(df):
+    selected_isin = df.iloc[selected_row_index]["codigoIsin"]
+elif df.shape[0] == 1:
+    selected_isin = df.iloc[0]["codigoIsin"]
+else:
+    selected_isin = None
+
+if selected_isin:
+    producto = get_producto_by_isin(selected_isin)
+    if not producto:
+        st.warning("No se encontraron los detalles del producto seleccionado.")
+    else:
+        nombre_producto = producto["nombre"]
+
+        with st.expander(f"Información del producto", expanded=True):
+            render_general_info(producto)
+            render_rentabilidad(producto)
+            cols = st.columns(2)
+            with cols[0]:
+                render_general_info_tabla(producto)
+            with cols[1]:
+                render_comisiones(producto)
+
+            with st.container(horizontal=True):
+                with st.container():
+                    render_sectores(producto)
+                with st.container():
+                    render_regiones(producto)
+
+            render_composiciones(producto)
+
+            with st.expander("Detalle completo del producto", expanded=False):
+                st.json(producto)
+
+        # with st.expander(f"Información del producto", expanded=True):
+        #     render_general_info(producto)
+        #     with st.container(horizontal=True):
+        #         with st.container():
+        #             render_general_info_tabla(producto)
+        #         with st.container():
+        #             render_comisiones(producto)
+        #         with st.container():
+        #             render_sectores(producto)
+        #     with st.expander("Detalle completo del producto", expanded=False):
+        #         st.json(producto)
+
+else:
+    st.write("Selecciona un producto para ver sus detalles.")
+
 with st.expander("Asesor MIX (beta)", expanded=False):
     if df.empty:
         st.info("No hay productos disponibles para construir mix.")
@@ -719,7 +772,9 @@ with st.expander("Asesor MIX (beta)", expanded=False):
 
                 if recommendation["excluded"]:
                     excluded_df = pd.DataFrame(recommendation["excluded"])
-                    st.warning("Algunos productos fueron excluidos por datos incompletos.")
+                    st.warning(
+                        "Algunos productos fueron excluidos por datos incompletos."
+                    )
                     st.dataframe(excluded_df, hide_index=True, width="stretch")
 
             except RecommendationError as err:
@@ -727,56 +782,6 @@ with st.expander("Asesor MIX (beta)", expanded=False):
         else:
             st.info("Selecciona uno o más ISIN para calcular mix recomendado.")
 
-
-selected_row_index = selected_rows[0] if selected_rows else None
-if selected_row_index is not None and 0 <= selected_row_index < len(df):
-    selected_isin = df.iloc[selected_row_index]["codigoIsin"]
-elif df.shape[0] == 1:
-    selected_isin = df.iloc[0]["codigoIsin"]
-else:
-    selected_isin = None
-
-if selected_isin:
-    producto = get_producto_by_isin(selected_isin)
-    if not producto:
-        st.warning("No se encontraron los detalles del producto seleccionado.")
-    else:
-        nombre_producto = producto["nombre"]
-
-        with st.expander(f"Información del producto", expanded=True):
-            render_general_info(producto)
-            render_rentabilidad(producto)
-            cols = st.columns(2)
-            with cols[0]:
-                render_general_info_tabla(producto)
-            with cols[1]:
-                render_comisiones(producto)
-
-            with st.container(horizontal=True):
-                with st.container():
-                    render_sectores(producto)
-                with st.container():
-                    render_regiones(producto)
-
-            render_composiciones(producto)
-
-            with st.expander("Detalle completo del producto", expanded=False):
-                st.json(producto)
-
-        # with st.expander(f"Información del producto", expanded=True):
-        #     render_general_info(producto)
-        #     with st.container(horizontal=True):
-        #         with st.container():
-        #             render_general_info_tabla(producto)
-        #         with st.container():
-        #             render_comisiones(producto)
-        #         with st.container():
-        #             render_sectores(producto)
-        #     with st.expander("Detalle completo del producto", expanded=False):
-        #         st.json(producto)
-
-else:
-    st.write("Selecciona un producto para ver sus detalles.")
 
 # Disclaimer
 st.markdown(
