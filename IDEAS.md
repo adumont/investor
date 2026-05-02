@@ -2,7 +2,7 @@
 
 ### Data Source Note
 
-Many features below (correlation heatmap, drawdown analysis, benchmark comparison, factor exposure, currency risk) require historical price/return data that the MyInvestor API does not provide. Use **investpy** (`pip install investpy`) for real financial data fetching:
+Many features below (correlation heatmap, drawdown analysis, benchmark comparison, factor exposure, currency risk) require historical price/return data that the MyInvestor API does not provide. Use **investpy** (`pip install investpy`) or **investiny** for real financial data fetching:
 
 - **Historical prices:** Daily OHLCV for stocks, ETFs, funds, indices, bonds, currencies
 - **Benchmarks:** MSCI World, S&P 500, Euribor, EONIA, FTSE All-World data
@@ -11,6 +11,8 @@ Many features below (correlation heatmap, drawdown analysis, benchmark compariso
 - **Economic indicators:** Inflation, rates for macro scenario context
 
 **Caveats:** investpy scrapes Investing.com — rate-limit requests, handle errors gracefully, cache aggressively. Consider it a complementary source to MyInvestor API, not a replacement. For production, evaluate paid APIs (Morningstar, Bloomberg, Refinitiv) for reliability.
+
+**Careful** Ensure the library work with some funds first, don't assume it does and start coding with an unverified asumption...
 
 ### High Priority
 
