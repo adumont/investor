@@ -219,7 +219,7 @@ The entire SQL string is reconstructed on every interaction (filter change, sele
 
 **Status:** Fixed. Added `@st.cache_data` wrapper `run_query(_df_productos, query)` keyed on the SQL string. Same filters → cache hit. Different filters → fresh execution.
 
-### 4.2 `get_listas_opciones` iterates full DataFrame multiple times — P2
+### 4.2 `get_listas_opciones` iterates full DataFrame multiple times — P2 ✅ Fixed
 
 **File:** `productos.py:46-80`
 
@@ -228,6 +228,8 @@ Nine separate passes over the DataFrame to extract unique values. Each `apply(la
 **Remediation:**
 - Single pass with `agg` or vectorized operations.
 - Or convert once: `_df_productos[["zonaGeografica", "categoria", ...]].agg(lambda col: col.dropna().unique().tolist())`.
+
+**Status:** Fixed. Replaced 6 repeated `apply(...).unique().tolist()` + `.remove("nan")` passes with single `.agg()` on string columns. Also fixed `DIVISAS` crash on null `divisasDto` and `SECTORES` dedup via `set()`.
 
 ### 4.3 `render_comisiones`, `render_sectores`, `render_regiones` build markdown strings in loops — P2
 
@@ -421,8 +423,8 @@ SQL is embedded in Python dict. Not parameterized. Safe because values are hardc
 |---|---|---|---|
 | 1 | Hardcoded API token in source | P0 | `productos.py:26` |
 | 2 | SQL injection pattern (manual escaping, not parameterized) | P0 | `app.py:78-144` |
-| 3 | `ZONAS.remove("nan")` crashes if absent | P1 | `productos.py:49` |
-| 4 | `DIVISAS` extraction crashes on null `divisasDto` | P1 | `productos.py:46` |
+| 3 | `ZONAS.remove("nan")` crashes if absent ✅ Fixed | P1 | `productos.py:49` |
+| 4 | `DIVISAS` extraction crashes on null `divisasDto` ✅ Fixed | P1 | `productos.py:46` |
 | 5 | No timeout on API request | P1 | `productos.py:10` |
 | 6 | No HTTP status check before `.json()` | P1 | `productos.py:10` |
 | 7 | `read_json_from_file` no error handling | P1 | `productos.py:14-16` |
@@ -430,7 +432,7 @@ SQL is embedded in Python dict. Not parameterized. Safe because values are hardc
 | 9 | Module-level side effects on every rerun | P1 | `app.py:54-68` |
 | 10 | No test suite for non-trivial advisor logic | P1 | `recommendador.py` |
 | 11 | `app.py` monolith (801 lines) | P1 | `app.py` |
-| 12 | SQL rebuilt on every rerun | P1 | `app.py:204-245` |
+| 12 | SQL rebuilt on every rerun ✅ Fixed | P1 | `app.py:204-245` |
 | 13 | Auto-open detail can't be dismissed for single result | P1 | `app.py:572-578` |
 | 14 | Dead code: `get_general_info_markdown`, `format_bool`, `nombre_producto` | P2 | `app.py` |
 | 15 | Unused imports: `getenv`, `json` | P2 | `app.py` |

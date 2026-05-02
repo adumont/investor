@@ -43,41 +43,38 @@ def get_df_productos(productos):
 def get_listas_opciones(_df_productos):
     import pandas as pd
 
-    DIVISAS = _df_productos["divisasDto"].apply(lambda x: x["codigo"]).unique()
-    # remove "nan" from DIVISAS
-    ZONAS = _df_productos["zonaGeografica"].apply(lambda x: str(x)).unique().tolist()
-    ZONAS.remove("nan")
-    
-    TIPOS_PRODUCTO = _df_productos["tipoProductoEnum"].unique()
+    DIVISAS = _df_productos["divisasDto"].apply(
+        lambda x: x.get("codigo") if isinstance(x, dict) else None
+    ).dropna().unique()
 
-    TIPO_ACTIVO = _df_productos["tipoActivo"].apply(lambda x: str(x)).unique().tolist()
-    if "nan" in TIPO_ACTIVO:
-        TIPO_ACTIVO.remove("nan")
+    TIPOS_PRODUCTO = _df_productos["tipoProductoEnum"].dropna().unique()
 
-    CATEGORIAS = _df_productos["categoria"].apply(lambda x: str(x)).unique().tolist()
-    if "nan" in CATEGORIAS:
-        CATEGORIAS.remove("nan")
+    _STR_COLS = [
+        "zonaGeografica",
+        "tipoActivo",
+        "categoria",
+        "categoriaMyInvestor",
+        "categoriaMstar",
+        "entidadGestora",
+    ]
+    _unique_map = _df_productos[_STR_COLS].agg(
+        lambda col: col.dropna().unique().tolist()
+    )
+    ZONAS = _unique_map["zonaGeografica"]
+    TIPO_ACTIVO = _unique_map["tipoActivo"]
+    CATEGORIAS = _unique_map["categoria"]
+    CATEGORIAS_MYINVESTOR = _unique_map["categoriaMyInvestor"]
+    CATEGORIAS_MSTAR = _unique_map["categoriaMstar"]
+    GESTORAS = _unique_map["entidadGestora"]
 
-    CATEGORIAS_MYINVESTOR = _df_productos["categoriaMyInvestor"].apply(lambda x: str(x)).unique().tolist()
-    if "nan" in CATEGORIAS_MYINVESTOR:
-        CATEGORIAS_MYINVESTOR.remove("nan")
-
-    CATEGORIAS_MSTAR = _df_productos["categoriaMstar"].apply(lambda x: str(x)).unique().tolist()
-    if "nan" in CATEGORIAS_MSTAR:
-        CATEGORIAS_MSTAR.remove("nan")
-
-    GESTORAS = _df_productos["entidadGestora"].apply(lambda x: str(x)).unique().tolist()
-    if "nan" in GESTORAS:
-        GESTORAS.remove("nan")
-
-    SECTORES = []
+    SECTORES = set()
     for sector_list in _df_productos["listaSectores"].dropna():
         if isinstance(sector_list, list):
             for s in sector_list:
                 nombre = s.get("nombre")
-                if nombre and nombre not in SECTORES:
-                    SECTORES.append(nombre)
-    SECTORES.sort()
+                if nombre:
+                    SECTORES.add(nombre)
+    SECTORES = sorted(SECTORES)
 
     return (
         DIVISAS,
