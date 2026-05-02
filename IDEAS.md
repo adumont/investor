@@ -1,1 +1,0 @@
-- Mostrar datos Volatilidad, umbral de Volatilidad max
