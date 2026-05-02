@@ -225,7 +225,7 @@ Asesor MIX block in app.py:
 8. Exclusions table when present.
 
 ## Limitations
-1. No covariance matrix; diversification effects approximated only through weighted volatility.
+1. Covariance proxy uses heuristic correlations by metadata similarity, not real market data. Diversification credit is approximate.
 2. Scenario optimistic/conservative built from per-asset historical extrema, not joint distribution.
 3. Historical proxy coverage can be below 100% when some assets miss years.
 4. Horizon mapping currently discrete and lower-bound only.

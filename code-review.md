@@ -225,13 +225,23 @@ Data fetching (`get_productos()`), DataFrame construction, and option list gener
 - Introduce a `Product` dataclass or TypedDict.
 - Centralize field access in one place so schema changes are isolated.
 
-### 3.4 MIX advisor has no covariance modeling — P2
+### 3.4 MIX advisor has no covariance modeling — P2 ✅ Fixed
 
 **File:** `recommendador.py`, `ADVISOR.md` §Limitations
 
 Volatility is computed as weighted sum. No correlation between assets. Two highly correlated funds will appear diversified when they are not. Documented in ADVISOR.md as known limitation, but worth flagging for users who might trust the output more than they should.
 
 **Remediation:** Already documented. Future: add correlation proxy by category overlap (ADVISOR.md §Extension Path).
+
+**Status:** Fixed. Added `_build_correlation_matrix()` with heuristic correlation levels:
+- Same `categoriaMstar`/`categoria`: 0.85
+- Same `zonaGeografica`: 0.60
+- Same `tipoActivo`: 0.40
+- Default: 0.20
+
+Portfolio volatility now uses `sqrt(w^T * Σ * w)` where `Σ[i][j] = corr[i][j] * vol_i * vol_j`.
+When all corr=1.0, reduces to original weighted sum. Diversification credit shown when assets differ.
+Correlation levels are heuristics — not real market data. Updated ADVISOR.md limitation note.
 
 ---
 
@@ -477,3 +487,4 @@ SQL is embedded in Python dict. Not parameterized. Safe because values are hardc
 | 24 | Filter option lists unsorted, whitespace pollutes sort ✅ Fixed | P2 | `productos.py:46-91` |
 | 25 | `datetime` imported as module, only `date` needed ✅ Fixed | P2 | `app.py:8` |
 | 26 | `ZONAS.remove("nan")` crashes if absent ✅ Fixed | P1 | `productos.py:49` |
+| 27 | MIX advisor has no covariance modeling ✅ Fixed | P2 | `recommendador.py` |

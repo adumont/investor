@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import sqrt
 from typing import Any
 
 
@@ -16,6 +17,13 @@ VOLATILITY_FIELDS = {
     5: "volatilidadYearCinco",
 }
 
+# Heuristic correlation levels for covariance proxy.
+# Higher correlation when assets share metadata.
+CORR_SAME_CATEGORY = 0.85
+CORR_SAME_ZONE = 0.60
+CORR_SAME_ASSET_TYPE = 0.40
+CORR_DEFAULT = 0.20
+
 
 @dataclass
 class Candidate:
@@ -26,6 +34,9 @@ class Candidate:
     volatility: float
     risk_score: float
     history_returns: list[float]
+    categoria: str | None
+    zona: str | None
+    tipo_activo: str | None
 
 
 class RecommendationError(ValueError):
@@ -44,6 +55,15 @@ def _to_float(value: Any, default: float | None = None) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return default
+
+
+def _non_empty_str(value: Any) -> str | None:
+    if not value or not isinstance(value, str):
+        return None
+    cleaned = value.strip()
+    if not cleaned or cleaned in {".", "N/A", "nan", "None"}:
+        return None
+    return cleaned
 
 
 def _pct_points_to_decimal(value: float | None) -> float | None:
@@ -101,6 +121,34 @@ def _get_volatility(producto: dict[str, Any], horizon_bucket: int) -> float | No
     return max(0.03, min(0.35, (risk / 7.0) * 0.30))
 
 
+def _build_correlation_matrix(candidates: list[Candidate]) -> list[list[float]]:
+    n = len(candidates)
+    corr = [[CORR_DEFAULT] * n for _ in range(n)]
+    for i in range(n):
+        corr[i][i] = 1.0
+        for j in range(i + 1, n):
+            ci, cj = candidates[i], candidates[j]
+            c = CORR_DEFAULT
+            if ci.categoria and ci.categoria == cj.categoria:
+                c = CORR_SAME_CATEGORY
+            elif ci.zona and ci.zona == cj.zona:
+                c = CORR_SAME_ZONE
+            elif ci.tipo_activo and ci.tipo_activo == cj.tipo_activo:
+                c = CORR_SAME_ASSET_TYPE
+            corr[i][j] = corr[j][i] = c
+    return corr
+
+
+def _portfolio_volatility(candidates: list[Candidate], weights: list[float]) -> float:
+    corr = _build_correlation_matrix(candidates)
+    n = len(candidates)
+    var = 0.0
+    for i in range(n):
+        for j in range(n):
+            var += weights[i] * weights[j] * corr[i][j] * candidates[i].volatility * candidates[j].volatility
+    return sqrt(max(var, 0.0))
+
+
 def _build_candidate(producto: dict[str, Any], horizon_bucket: int) -> tuple[Candidate | None, str | None]:
     isin = str(producto.get("codigoIsin") or "").strip()
     nombre = str(producto.get("nombre") or isin)
@@ -119,6 +167,9 @@ def _build_candidate(producto: dict[str, Any], horizon_bucket: int) -> tuple[Can
 
     risk_score = _to_float(producto.get("indicadorRiesgo"), 0.0) or 0.0
     history_returns = _extract_history_returns(producto)
+    categoria = _non_empty_str(producto.get("categoriaMstar")) or _non_empty_str(producto.get("categoria"))
+    zona = _non_empty_str(producto.get("zonaGeografica"))
+    tipo_activo = _non_empty_str(producto.get("tipoActivo"))
 
     return (
         Candidate(
@@ -129,6 +180,9 @@ def _build_candidate(producto: dict[str, Any], horizon_bucket: int) -> tuple[Can
             volatility=volatility,
             risk_score=risk_score,
             history_returns=history_returns,
+            categoria=categoria,
+            zona=zona,
+            tipo_activo=tipo_activo,
         ),
         None,
     )
@@ -212,7 +266,6 @@ def recommend_mix(
 
         portfolio_expected_gross += gross_contribution
         portfolio_ter += ter_contribution
-        portfolio_volatility += weight * candidate.volatility
         portfolio_objective += objective_contribution
 
         allocations.append(
@@ -230,10 +283,15 @@ def recommend_mix(
                 "risk_contribution": risk_contribution,
                 "objective_contribution": objective_contribution,
                 "history_returns": candidate.history_returns,
+                "categoria": candidate.categoria,
+                "zona": candidate.zona,
+                "tipo_activo": candidate.tipo_activo,
             }
         )
 
     allocations.sort(key=lambda row: row["weight"], reverse=True)
+
+    portfolio_volatility = _portfolio_volatility(candidates, weights)
 
     portfolio_net_expected = portfolio_expected_gross - portfolio_ter
 
