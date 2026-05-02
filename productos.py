@@ -40,7 +40,7 @@ def get_df_productos(productos):
 
 
 @cache_data(show_spinner=False, ttl=CACHE_TTL)
-def get_listas_opciones(_df_productos):
+def get_listas_opciones(_df_productos, data_version: str):
     import pandas as pd
 
     DIVISAS = _df_productos["divisasDto"].apply(

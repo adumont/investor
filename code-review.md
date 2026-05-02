@@ -164,6 +164,23 @@ If `divisasDto` is `None` for any row, the lambda raises `TypeError: 'NoneType' 
 
 **Remediation:** Guard with `.apply(lambda x: x.get("codigo") if isinstance(x, dict) else None).dropna().unique()`.
 
+### 2.12 `@cache_data` ignores stale data after refresh — P1 ✅ Fixed
+
+**Files:** `productos.py:42-43`, `app.py:147-149, 287-289`
+
+Three cached functions depend on product data but exclude it from cache keys:
+- `get_listas_opciones(_df_productos)` — `_` prefix excludes DataFrame from hash. Cache key is constant.
+- `run_query(_df_productos, query)` — DataFrame excluded. `query` is hashed, but same SQL on fresh data returns stale result.
+- `get_producto_by_isin(isin)` — closes over `productos_lista` from module scope, not passed as argument.
+
+When `get_productos()` refreshes after 6h TTL: new data arrives, new `df_productos` is built, but all three functions return cached stale values until their own 6h TTL independently expires.
+
+**Remediation:**
+- Pass `timestamp_products` (from `get_productos()`) as non-underscore `data_version` argument to all cached functions.
+- Cache key now includes data version. When data refreshes, all downstream caches miss immediately.
+
+**Status:** Fixed. All 3 cached functions now accept `data_version: str` (non-underscore). Call sites pass `timestamp_products`. Cache keys invalidate on data refresh. `get_producto_by_isin` no longer closes over module-scoped `productos_lista`.
+
 ---
 
 ## 3. Architecture
@@ -434,12 +451,13 @@ SQL is embedded in Python dict. Not parameterized. Safe because values are hardc
 | 11 | `app.py` monolith (801 lines) | P1 | `app.py` |
 | 12 | SQL rebuilt on every rerun ✅ Fixed | P1 | `app.py:204-245` |
 | 13 | Auto-open detail can't be dismissed for single result | P1 | `app.py:572-578` |
-| 14 | Dead code: `get_general_info_markdown`, `format_bool`, `nombre_producto` | P2 | `app.py` |
-| 15 | Unused imports: `getenv`, `json` | P2 | `app.py` |
-| 16 | Commented-out code blocks | P2 | `app.py` |
-| 17 | Typo in `FILTROS_RAPIDOS` ("Lage Cap") | P2 | `app.py:46` |
-| 18 | No type hints on public functions | P2 | `productos.py`, `app.py` |
-| 19 | Inconsistent import placement | P2 | `productos.py` |
-| 20 | Magic numbers in recommendador | P2 | `recommendador.py` |
-| 21 | Missing Spanish accents in explicabilidad | P2 | `explicabilidad.py:19` |
-| 22 | No CI pipeline | P2 | repo root |
+| 14 | `@cache_data` ignores stale data after refresh ✅ Fixed | P1 | `productos.py:42, app.py:147,287` |
+| 15 | Dead code: `get_general_info_markdown`, `format_bool`, `nombre_producto` | P2 | `app.py` |
+| 16 | Unused imports: `getenv`, `json` | P2 | `app.py` |
+| 17 | Commented-out code blocks | P2 | `app.py` |
+| 18 | Typo in `FILTROS_RAPIDOS` ("Lage Cap") | P2 | `app.py:46` |
+| 19 | No type hints on public functions | P2 | `productos.py`, `app.py` |
+| 20 | Inconsistent import placement | P2 | `productos.py` |
+| 21 | Magic numbers in recommendador | P2 | `recommendador.py` |
+| 22 | Missing Spanish accents in explicabilidad | P2 | `explicabilidad.py:19` |
+| 23 | No CI pipeline | P2 | repo root |

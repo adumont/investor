@@ -65,7 +65,7 @@ df_productos = get_df_productos(productos_lista)
     GESTORAS,
     SECTORES,
     TIPO_ACTIVO,
-) = get_listas_opciones(df_productos)
+) = get_listas_opciones(df_productos, timestamp_products)
 
 cols = st.columns(2)
 cols[0].title("Productos en MyInvestor")
@@ -145,7 +145,7 @@ def get_sector_columns_sql(sectores: list[str]):
 
 
 @st.cache_data(show_spinner=False)
-def run_query(_df_productos, query: str) -> pd.DataFrame:
+def run_query(_df_productos, query: str, data_version: str) -> pd.DataFrame:
     return duckdb.query(query).df()
 
 
@@ -266,7 +266,7 @@ with st.expander("Más filtros & Selección de columnas", expanded=False):
     with st.expander("Consulta SQL"):
         st.code(query)
 
-df = run_query(df_productos, query)
+df = run_query(df_productos, query, timestamp_products)
 if df.empty:
     st.error("No hay productos que correspondan a esos filtros.")
     tabla = {"selection": {"rows": []}}
@@ -285,8 +285,8 @@ selected_rows = tabla.get("selection", {}).get("rows", [])
 
 
 @st.cache_data(show_spinner=False, ttl=CACHE_TTL)
-def get_producto_by_isin(isin):
-    return next((p for p in productos_lista if p["codigoIsin"] == isin), None)
+def get_producto_by_isin(_productos, isin, data_version: str):
+    return next((p for p in _productos if p["codigoIsin"] == isin), None)
 
 
 def to_float(value):
@@ -583,7 +583,7 @@ else:
     selected_isin = None
 
 if selected_isin:
-    producto = get_producto_by_isin(selected_isin)
+    producto = get_producto_by_isin(productos_lista, selected_isin, timestamp_products)
     if not producto:
         st.warning("No se encontraron los detalles del producto seleccionado.")
     else:
