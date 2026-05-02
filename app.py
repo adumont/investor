@@ -1,11 +1,9 @@
 import streamlit as st
 import duckdb
 import pandas as pd
-import json
 import altair as alt
 from dotenv import load_dotenv
-from os import getenv
-import datetime
+from datetime import date
 
 from vars import CACHE_TTL, LOCAL_FILE_TIMESTAMP
 
@@ -43,6 +41,7 @@ if "threshold_sector" not in st.session_state:
 
 FILTROS_RAPIDOS = {
     "Cualquiera": "1=1",
+    # "Lage Cap" is NOT a typo — matches the raw API category value. Won't fix.
     "World": "categoria = 'Global Equity Large Cap' or categoria = 'Global Equity Lage Cap' or  categoriaMstar = 'RV Global Cap. Grande Blend'",
     "S&P 500": "categoria = 'US Equity Large Cap Blend' or categoriaMstar = 'RV USA Cap. Grande Blend'",
     "Emergentes": "zonaGeografica = 'Mercados Emergentes' OR categoria = 'Global Emerging Markets Equity' or categoriaMstar = 'RV Global Emergente'",
@@ -99,7 +98,7 @@ selected_producto = cols[2].multiselect(
 )
 selected_gestora = cols[3].multiselect("Filtro por gestora:", options=list(GESTORAS))
 
-year = datetime.date.today().year
+year = date.today().year
 
 
 def get_filtro_sql(field: str, options: list[str]):
@@ -381,19 +380,6 @@ def render_sectores(producto):
     st.markdown(sectores_md)
 
 
-def get_general_info_markdown(producto):
-    if not producto:
-        return "No hay información disponible."
-
-
-def format_bool(value):
-    if value is True:
-        return "Si"
-    if value is False:
-        return "No"
-    return "N/D"
-
-
 def format_text(value):
     if value is None or value == "":
         return "N/D"
@@ -587,8 +573,6 @@ if selected_isin:
     if not producto:
         st.warning("No se encontraron los detalles del producto seleccionado.")
     else:
-        nombre_producto = producto["nombre"]
-
         with st.expander(f"Información del producto", expanded=True):
             render_general_info(producto)
             render_rentabilidad(producto)

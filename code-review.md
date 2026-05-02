@@ -69,7 +69,7 @@ The function calls `.apply()` and `.unique()` on `_df_productos`. Since the Data
 - Use `ZONAS = [z for z in ZONAS if z != "nan"]` or `ZONAS.discard("nan")` pattern.
 - Better: filter at source — `dropna()` before `str()` conversion.
 
-### 2.2 `FILTROS_RAPIDOS` has typo — P2
+### 2.2 `FILTROS_RAPIDOS` has typo — P2 ✅ Won't Fix
 
 **File:** `app.py:46`
 
@@ -81,23 +81,25 @@ The function calls `.apply()` and `.unique()` on `_df_productos`. Since the Data
 
 **Remediation:** Fix typo to `"Large Cap"`.
 
-### 2.3 `get_general_info_markdown` is dead code — P2
+**Status:** Won't fix. `"Lage Cap"` is the raw category value as stored by the API. Both spellings are matched so the filter works correctly. Comment added to prevent future "fix".
+
+### 2.3 `get_general_info_markdown` is dead code — P2 ✅ Fixed
 
 **File:** `app.py:379-381`
 
 Function defined but never called. Returns nothing (implicit `None`) for non-empty case.
 
-**Remediation:** Delete.
+**Status:** Deleted.
 
-### 2.4 `format_bool` is dead code — P2
+### 2.4 `format_bool` is dead code — P2 ✅ Fixed
 
 **File:** `app.py:384-389`
 
 Defined but never called anywhere.
 
-**Remediation:** Delete.
+**Status:** Deleted.
 
-### 2.5 `nombre_producto` assigned but never used — P2
+### 2.5 `nombre_producto` assigned but never used — P2 ✅ Fixed
 
 **File:** `app.py:585`
 
@@ -107,25 +109,21 @@ nombre_producto = producto["nombre"]
 
 Variable assigned but not referenced.
 
-**Remediation:** Delete or use in expander title.
+**Status:** Deleted.
 
-### 2.6 `getenv` imported but never used — P2
+### 2.6 `getenv` imported but never used — P2 ✅ Fixed
 
 **File:** `app.py:7`
 
-```python
-from os import getenv
-```
+**Status:** Deleted.
 
-**Remediation:** Delete.
-
-### 2.7 `json` imported but never used — P2
+### 2.7 `json` imported but never used — P2 ✅ Fixed
 
 **File:** `app.py:4`
 
-**Remediation:** Delete.
+**Status:** Deleted.
 
-### 2.8 `datetime` imported as module, but only `date` needed — P2
+### 2.8 `datetime` imported as module, but only `date` needed — P2 ✅ Fixed
 
 **File:** `app.py:8`
 
@@ -134,7 +132,7 @@ import datetime
 ```
 Used only as `datetime.date.today().year`.
 
-**Remediation:** `from datetime import date` or `import datetime; year = datetime.datetime.now().year`.
+**Status:** Changed to `from datetime import date`, call is now `date.today().year`.
 
 ### 2.9 `threshold_sector` slider value is `int`, passed to SQL as float — P2
 
@@ -144,15 +142,15 @@ The slider returns `int` (step=5, no value format). Interpolated into SQL as `{t
 
 **Remediation:** Cast explicitly or document.
 
-### 2.10 `ZONAS.remove("nan")` will crash if list is empty — P1
+### 2.10 `ZONAS.remove("nan")` will crash if list is empty — P1 ✅ Fixed
 
 **File:** `productos.py:49`
 
 If `ZONAS` is empty after `unique()`, `.remove()` raises `ValueError`. Defensive code is inconsistent: `TIPO_ACTIVO` uses `if "nan" in TIPO_ACTIVO: TIPO_ACTIVO.remove("nan")` (safe), but `ZONAS` does not.
 
-**Remediation:** Use consistent guard: `if "nan" in ZONAS: ZONAS.remove("nan")`.
+**Status:** Fixed in 4.2 — replaced with `dropna()` which is inherently safe.
 
-### 2.11 `DIVISAS` not cleaned of NaN — P1
+### 2.11 `DIVISAS` not cleaned of NaN — P1 ✅ Fixed
 
 **File:** `productos.py:46`
 
@@ -163,6 +161,8 @@ DIVISAS = _df_productos["divisasDto"].apply(lambda x: x["codigo"]).unique()
 If `divisasDto` is `None` for any row, the lambda raises `TypeError: 'NoneType' object is not subscriptable`. Other fields use `str(x)` conversion before filtering.
 
 **Remediation:** Guard with `.apply(lambda x: x.get("codigo") if isinstance(x, dict) else None).dropna().unique()`.
+
+**Status:** Fixed in 4.2 — lambda now uses `x.get("codigo")` with `isinstance` guard + `dropna()`.
 
 ### 2.12 `@cache_data` ignores stale data after refresh — P1 ✅ Fixed
 
@@ -465,13 +465,15 @@ SQL is embedded in Python dict. Not parameterized. Safe because values are hardc
 | 12 | SQL rebuilt on every rerun ✅ Fixed | P1 | `app.py:204-245` |
 | 13 | Auto-open detail can't be dismissed for single result | P1 | `app.py:572-578` |
 | 14 | `@cache_data` ignores stale data after refresh ✅ Fixed | P1 | `productos.py:42, app.py:147,287` |
-| 15 | Dead code: `get_general_info_markdown`, `format_bool`, `nombre_producto` | P2 | `app.py` |
-| 16 | Unused imports: `getenv`, `json` | P2 | `app.py` |
+| 15 | Dead code: `get_general_info_markdown`, `format_bool`, `nombre_producto` ✅ Fixed | P2 | `app.py` |
+| 16 | Unused imports: `getenv`, `json` ✅ Fixed | P2 | `app.py` |
 | 17 | Commented-out code blocks | P2 | `app.py` |
-| 18 | Typo in `FILTROS_RAPIDOS` ("Lage Cap") | P2 | `app.py:46` |
+| 18 | Typo in `FILTROS_RAPIDOS` ("Lage Cap") ✅ Won't Fix | P2 | `app.py:46` |
 | 19 | No type hints on public functions | P2 | `productos.py`, `app.py` |
 | 20 | Inconsistent import placement | P2 | `productos.py` |
 | 21 | Magic numbers in recommendador | P2 | `recommendador.py` |
 | 22 | Missing Spanish accents in explicabilidad | P2 | `explicabilidad.py:19` |
 | 23 | No CI pipeline | P2 | repo root |
 | 24 | Filter option lists unsorted, whitespace pollutes sort ✅ Fixed | P2 | `productos.py:46-91` |
+| 25 | `datetime` imported as module, only `date` needed ✅ Fixed | P2 | `app.py:8` |
+| 26 | `ZONAS.remove("nan")` crashes if absent ✅ Fixed | P1 | `productos.py:49` |
