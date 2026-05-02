@@ -207,7 +207,7 @@ Volatility is computed as weighted sum. No correlation between assets. Two highl
 
 ## 4. Performance
 
-### 4.1 SQL query rebuilt on every rerun — P1
+### 4.1 SQL query rebuilt on every rerun — P1 ✅ Fixed
 
 **File:** `app.py:204-245`
 
@@ -216,6 +216,8 @@ The entire SQL string is reconstructed on every interaction (filter change, sele
 **Remediation:**
 - Cache query results keyed by filter state using `@st.cache_data`.
 - Or use `st.session_state` to track last query and skip re-execution.
+
+**Status:** Fixed. Added `@st.cache_data` wrapper `run_query(_df_productos, query)` keyed on the SQL string. Same filters → cache hit. Different filters → fresh execution.
 
 ### 4.2 `get_listas_opciones` iterates full DataFrame multiple times — P2
 

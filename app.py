@@ -144,6 +144,11 @@ def get_sector_columns_sql(sectores: list[str]):
     return "\n".join(parts)
 
 
+@st.cache_data(show_spinner=False)
+def run_query(_df_productos, query: str) -> pd.DataFrame:
+    return duckdb.query(query).df()
+
+
 with st.expander("Más filtros & Selección de columnas", expanded=False):
     with st.container():
         cols = st.columns(4)
@@ -261,7 +266,7 @@ with st.expander("Más filtros & Selección de columnas", expanded=False):
     with st.expander("Consulta SQL"):
         st.code(query)
 
-df = duckdb.query(query).df()
+df = run_query(df_productos, query)
 if df.empty:
     st.error("No hay productos que correspondan a esos filtros.")
     tabla = {"selection": {"rows": []}}
