@@ -44,7 +44,7 @@ def get_listas_opciones(_df_productos, data_version: str):
     import pandas as pd
 
     DIVISAS = _df_productos["divisasDto"].apply(
-        lambda x: x.get("codigo") if isinstance(x, dict) else None
+        lambda x: x.get("codigo") if isinstance(x, dict) and x.get("codigo") else None
     ).dropna().unique()
 
     TIPOS_PRODUCTO = _df_productos["tipoProductoEnum"].dropna().unique()
@@ -74,9 +74,11 @@ def get_listas_opciones(_df_productos, data_version: str):
                 nombre = s.get("nombre")
                 if nombre:
                     SECTORES.add(nombre)
-    SECTORES = sorted(SECTORES)
 
-    return (
+    # map(lambda, tuple) applies casefold-sort to each element,
+    # then tuple() rewraps results to preserve original order.
+    return tuple(
+        map(lambda x: sorted(x, key=lambda s: str(s).strip().casefold()), (
         DIVISAS,
         ZONAS,
         TIPOS_PRODUCTO,
@@ -86,4 +88,4 @@ def get_listas_opciones(_df_productos, data_version: str):
         GESTORAS,
         SECTORES,
         TIPO_ACTIVO,
-    )
+    )))

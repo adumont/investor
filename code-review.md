@@ -181,6 +181,19 @@ When `get_productos()` refreshes after 6h TTL: new data arrives, new `df_product
 
 **Status:** Fixed. All 3 cached functions now accept `data_version: str` (non-underscore). Call sites pass `timestamp_products`. Cache keys invalidate on data refresh. `get_producto_by_isin` no longer closes over module-scoped `productos_lista`.
 
+### 2.13 Filter option lists unsorted and whitespace pollution in sort — P2 ✅ Fixed
+
+**File:** `productos.py:46-91`
+
+Filter dropdowns appeared in arbitrary API order. Additionally, `" PARETO ASSET MANAGEMENT AS"` (leading space) sorted before `"A&G"` because `sorted()` uses byte-order comparison.
+
+**Remediation:**
+- Sort all returned lists with `sorted(x, key=lambda s: str(s).strip().casefold())`.
+- Strip applied only to sort key, not to stored values — exact-match SQL filters still find `" PARETO ..."` correctly.
+- `map()` applies sort to entire tuple in one pass.
+
+**Status:** Fixed. All 9 filter option lists sorted case-insensitively. Raw values preserved for SQL exact matching.
+
 ---
 
 ## 3. Architecture
@@ -461,3 +474,4 @@ SQL is embedded in Python dict. Not parameterized. Safe because values are hardc
 | 21 | Magic numbers in recommendador | P2 | `recommendador.py` |
 | 22 | Missing Spanish accents in explicabilidad | P2 | `explicabilidad.py:19` |
 | 23 | No CI pipeline | P2 | repo root |
+| 24 | Filter option lists unsorted, whitespace pollutes sort ✅ Fixed | P2 | `productos.py:46-91` |
