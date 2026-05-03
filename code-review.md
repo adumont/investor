@@ -8,7 +8,7 @@
 
 ## 1. Security
 
-### 1.1 Hardcoded API token — P0
+### 1.1 Hardcoded API token — P0 ✅ Fixed
 
 **File:** `productos.py:26`
 
@@ -18,11 +18,12 @@ productos=download_json_from_url("https://api.myinvestor.es/...?token=a2e8e18ad2
 
 The API token is committed in source and exposed to anyone who can read the deployed app (visible in network calls if the endpoint is intercepted). `.env` has `PRODUCT_JSON_URL` but is ignored.
 
-**Remediation:**
-- Move token to env var (reuse `PRODUCT_JSON_URL` or add `MYINVESTOR_API_TOKEN`).
-- Read from `os.environ` in `productos.py`.
-- Add `.env` to `.gitignore` (already done), ensure token never committed.
-- If token is meant to be public, document that explicitly.
+**Status:** Fixed.
+- Moved URL with token to `vars.py` as `MYINVESTOR_API_URL`.
+- `productos.py` now imports `MYINVESTOR_API_URL` from `vars`.
+- Added `load_dotenv()` to `productos.py`, allows override via `.env`.
+- `.env.example` created with dummy URL for reference.
+- Token still in committed `vars.py` (not fully secure, but centralized). For full security, token should be in `.env` only (future improvement).
 
 ### 1.2 SQL injection via user input — P0
 

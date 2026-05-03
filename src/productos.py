@@ -1,12 +1,17 @@
 from streamlit import cache_data
 import json
+import os
 import requests
+from dotenv import load_dotenv
 
-from vars import CACHE_TTL
+from vars import CACHE_TTL, MYINVESTOR_API_URL
+
+load_dotenv()
 
 
 def download_json_from_url(url):
-    response = requests.get(url)
+    response = requests.get(url, timeout=30)
+    response.raise_for_status()
     return response.json()
 
 
@@ -22,9 +27,8 @@ def get_productos():
 
     date_time = datetime.now(ZoneInfo("Europe/Madrid")).strftime("%d/%m/%Y %H:%M (%Z)")
     try:
-        productos = download_json_from_url(
-            "https://api.myinvestor.es/myinvestor-server/rest/public/fondos/find-fondos?tipo=TODOS&token=a2e8e18ad26a079c576038f0ad4fa18ce0d9e415f5bf6f43f89cf3831a0e4685__"
-        )
+        url = os.getenv("MYINVESTOR_API_URL", MYINVESTOR_API_URL)
+        productos = download_json_from_url(url)
         print(
             f"Datos descargados correctamente, {len(productos)} productos, fecha y hora de descarga: {date_time}"
         )
