@@ -5,6 +5,9 @@ from src.recommendador import (
     _build_candidate,
     _build_correlation_matrix,
     _nearest_lower_horizon,
+    _non_empty_str,
+    _get_required_return,
+    _get_volatility,
     _portfolio_volatility,
     _to_float,
     recommend_mix,
@@ -181,3 +184,63 @@ class TestRecommendMix:
         )
         assert len(result["excluded"]) == 1
         assert result["excluded"][0]["isin"] == "ES_DOES_NOT_EXIST"
+
+
+class TestEdgeCases:
+    def test_to_float_type_error(self):
+        # Passing a list should raise TypeError, caught by except clause
+        result = _to_float(["not", "a", "number"], default=99.9)
+        assert result == 99.9
+
+    def test_to_float_value_error(self):
+        # Invalid string that can't be parsed
+        result = _to_float("totally_invalid_!!!", default=42.0)
+        assert result == 42.0
+
+    def test_non_empty_str_invalid_input(self):
+        assert _non_empty_str(123) is None
+        assert _non_empty_str(None) is None
+        assert _non_empty_str("") is None
+        assert _non_empty_str(".") is None
+
+    def test_get_required_return_missing(self):
+        product = {"codigoIsin": "X", "nombre": "X"}
+        result = _get_required_return(product, 1)
+        assert result is None
+
+    def test_get_volatility_all_none(self):
+        product = {"codigoIsin": "X", "nombre": "X", "indicadorRiesgo": None}
+        result = _get_volatility(product, 1)
+        assert result is None
+
+    def test_build_candidate_missing_both(self):
+        product = {"codigoIsin": "X", "nombre": "X"}
+        candidate, reason = _build_candidate(product, 1)
+        assert candidate is None
+        assert reason is not None
+
+    def test_recommend_mix_zero_scores(self):
+        # All expected returns zero, should trigger score_sum <= 0 fallback
+        products = [
+            {
+                "codigoIsin": "ES1",
+                "nombre": "A",
+                "yearUno": 0.0,
+                "ter": 0.0,
+                "indicadorRiesgo": 1,
+            },
+            {
+                "codigoIsin": "ES2",
+                "nombre": "B",
+                "yearUno": 0.0,
+                "ter": 0.0,
+                "indicadorRiesgo": 1,
+            },
+        ]
+        result = recommend_mix(
+            products, ["ES1", "ES2"], horizon_years=1, min_weight=0.1
+        )
+        # Should still produce valid allocation
+        assert len(result["allocations"]) == 2
+        total = sum(a["weight"] for a in result["allocations"])
+        assert abs(total - 1.0) < 1e-9

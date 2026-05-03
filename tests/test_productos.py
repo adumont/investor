@@ -76,7 +76,7 @@ class TestGetListasOpciones:
 
 class TestDownloadJsonFromUrl:
     @patch("src.productos.requests")
-    def test_success(self, mock_requests):
+    def test_api_success(self, mock_requests):
         mock_response = MagicMock()
         mock_response.json.return_value = [{"a": 1}]
         mock_requests.get.return_value = mock_response
@@ -90,3 +90,23 @@ class TestDownloadJsonFromUrl:
 
         with pytest.raises(Exception):
             download_json_from_url("http://fake")
+
+
+class TestGetProductos:
+    @patch("src.productos.requests")
+    def test_api_failure_fallback(self, mock_requests):
+        from src.productos import get_productos
+
+        # Clear cache to ensure fresh execution
+        try:
+            get_productos.clear()
+        except Exception:
+            pass
+
+        # Make API fail
+        mock_requests.get.side_effect = Exception("Network error")
+
+        result = get_productos()
+        assert result is not None
+        assert len(result) == 2
+        assert len(result[1]) > 0  # Should fallback to local file
