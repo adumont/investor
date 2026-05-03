@@ -14,7 +14,12 @@ from productos import (
 from recommendador import recommend_mix, RecommendationError
 from simulacion import build_simulation
 from explicabilidad import build_recommendation_explanation
-from queries import get_filtro_sql, get_filtro_sector_sql, get_sector_columns_sql
+from queries import (
+    get_filtro_sql,
+    get_filtro_sector_sql,
+    get_sector_columns_sql,
+    build_product_query,
+)
 from renderers import (
     render_comisiones,
     render_regiones,
@@ -88,15 +93,6 @@ filter_name = cols[1].text_input(
     placeholder="Ejemplo: world, FR0000978371...",
 )
 filter_name = filter_name.strip()
-_filter_terms = [
-    t.strip().replace("'", "''") for t in filter_name.split(",") if t.strip()
-]
-if not _filter_terms:
-    _filter_name_sql = "1=1"
-else:
-    _filter_name_sql = " OR ".join(
-        f"codigoIsin ILIKE '%{t}%' OR nombre ILIKE '%{t}%'" for t in _filter_terms
-    )
 
 cols = st.columns(4)
 selected_filter = cols[0].selectbox(
@@ -172,51 +168,27 @@ with st.expander("Más filtros & Selección de columnas", expanded=False):
             disabled=not selected_sector,
         )
 
-    _sector_cols = get_sector_columns_sql(selected_sector) if show_sectores else ""
-    _use_unnest = show_sectores and bool(selected_sector)
-
-    query = f"""
-    SELECT 
-        codigoIsin,
-        nombre,
-        indicadorRiesgo as Risk,
-        ter as TER,
-        ytd as "{ year }",
-        { "" if show_rentabilidad_anios else "-- " }rentabilidadPasadaUno as "{ year - 1 }",
-        { "" if show_rentabilidad_anios else "-- " }rentabilidadPasadaDos as "{ year - 2 }",
-        { "" if show_rentabilidad_anios else "-- " }rentabilidadPasadaTres as "{ year - 3 }",
-        { "" if show_rentabilidad_anios else "-- " }rentabilidadPasadaCuatro as "{ year - 4 }",
-        { "" if show_rentabilidad_anios else "-- " }rentabilidadPasadaCinco as "{ year - 5 }",
-        { "" if show_rentabilidad_media_135 else "-- " }yearUno as "1Y",
-        { "" if show_rentabilidad_media_135 else "-- " }yearTres as "3Y",
-        { "" if show_rentabilidad_media_135 else "-- " }yearCinco as "5Y",
-        { "" if show_volatilidad else "-- " }volatilidadYearUno as "Vol 1Y",
-        { "" if show_volatilidad else "-- " }volatilidadYearTres as "Vol 3Y",
-        { "" if show_volatilidad else "-- " }volatilidadYearCinco as "Vol 5Y",
-        { "" if show_dias_desplazamiento else "-- " }diasDesplazamientoSuscripcion DiasS, diasDesplazamientoReembolso DiasR,
-        { "" if show_categories else "-- " }categoria, categoriaMyInvestor, categoriaMstar,
-        trackingErrorYearUno as TE_1Y,
-        entidadGestora as Gestora,
-        divisasDto.codigo AS divisa
-        {("," + _sector_cols) if _sector_cols else ""}
-    FROM df_productos
-        {"LEFT JOIN UNNEST(listaSectores) AS t(s) ON TRUE" if _use_unnest else ""}
-    WHERE
-        ( {_filter_name_sql} ) -- filtro por nombre/ISIN
-        AND ( {FILTROS_RAPIDOS[selected_filter]} ) -- filtro 
-        AND ( {get_filtro_sql("divisa", selected_divisa)} ) -- filtro divisa
-        AND ( {get_filtro_sql("zonaGeografica", selected_zona)} ) -- filtro zona geográfica
-        AND ( {get_filtro_sql("tipoProductoEnum", selected_producto)} ) -- filtro tipo de producto
-        AND ( {get_filtro_sql("categoria", selected_categoria)} ) -- filtro categoría
-        AND ( {get_filtro_sql("categoriaMstar", selected_categoria_mstar)} ) -- filtro categoría Morningstar
-        AND ( {get_filtro_sql("categoriaMyInvestor", selected_categoria_myinvestor)} ) -- filtro categoría MyInvestor
-        AND ( {get_filtro_sql("entidadGestora", selected_gestora)} ) -- filtro gestora
-        AND ( {get_filtro_sql("tipoActivo", selected_tipo_activo)} ) -- filtro tipo de activo
-        AND ( {get_filtro_sector_sql(selected_sector, threshold_sector)} ) -- filtro sector
-        AND status = 'OPEN'
-    { "GROUP BY codigoIsin, nombre, indicadorRiesgo, ter, ytd, rentabilidadPasadaUno, rentabilidadPasadaDos, rentabilidadPasadaTres, rentabilidadPasadaCuatro, rentabilidadPasadaCinco, yearUno, yearTres, yearCinco, volatilidadYearUno, volatilidadYearTres, volatilidadYearCinco, diasDesplazamientoSuscripcion, diasDesplazamientoReembolso, categoria, categoriaMyInvestor, categoriaMstar, trackingErrorYearUno, entidadGestora, divisasDto" if _use_unnest else "" }
-    ORDER BY indicadorRiesgo ASC, ter ASC, codigoIsin ASC
-    """
+    query = build_product_query(
+        year=year,
+        show_rentabilidad_anios=show_rentabilidad_anios,
+        show_rentabilidad_media_135=show_rentabilidad_media_135,
+        show_volatilidad=show_volatilidad,
+        show_dias_desplazamiento=show_dias_desplazamiento,
+        show_categories=show_categories,
+        show_sectores=show_sectores,
+        selected_sector=selected_sector,
+        threshold_sector=threshold_sector,
+        filter_name=filter_name,
+        selected_filter_sql=FILTROS_RAPIDOS[selected_filter],
+        selected_divisa=selected_divisa,
+        selected_zona=selected_zona,
+        selected_producto=selected_producto,
+        selected_categoria=selected_categoria,
+        selected_categoria_mstar=selected_categoria_mstar,
+        selected_categoria_myinvestor=selected_categoria_myinvestor,
+        selected_gestora=selected_gestora,
+        selected_tipo_activo=selected_tipo_activo,
+    )
 
     with st.expander("Consulta SQL"):
         st.code(query)
