@@ -407,16 +407,19 @@ Missing accents (`años`, `más`). Minor, but inconsistent with the rest of the 
 
 ## 7. Testing Gaps
 
-### 7.1 No test suite — P1
+### 7.1 No test suite — P1 ✅ Fixed
 
 No test framework configured. The MIX advisor logic (`recommendador.py`) has non-trivial scoring, constraint, and fallback behavior that is error-prone to verify manually.
 
-**Remediation:**
-- Add `pytest` to `requirements.txt`.
-- Create `tests/` directory.
-- Prioritize: `_to_float`, `_nearest_lower_horizon`, `_build_candidate`, `recommend_mix` feasibility check, score stabilization cases.
-- Use `myinvestor.json` as fixture data.
-- Mock `get_productos()` for any integration tests.
+**Status:** Fixed. Test suite implemented:
+- `pyproject.toml`: added `pytest` to `[project.optional-dependencies] dev`, configured `pythonpath = ["src"]`.
+- `tests/conftest.py`: fixtures for `myinvestor.json`, `sample_product`, `mock_get_productos`.
+- `tests/test_recommendador.py`: 20 tests covering `_to_float`, `_nearest_lower_horizon`, `_build_candidate`, `_get_volatility`, correlation matrix, portfolio volatility, `recommend_mix` (feasibility, weights, exclusions, score stabilization).
+- `tests/test_queries.py`: 15 tests covering SQL generation (`get_filtro_sql`, `build_name_filter_sql`, `get_filtro_sector_sql`, `get_sector_columns_sql`, `build_product_query`).
+- `tests/test_productos.py`: 9 tests covering `read_json_from_file`, `get_df_productos`, `_extract_options` (null handling, sorting), `download_json_from_url` (mocked).
+- Total: **54 tests**, all passing.
+
+Run: `uv run pytest tests/ -v`
 
 ### 7.2 No CI pipeline — P2
 
@@ -474,7 +477,7 @@ SQL is embedded in Python dict. Not parameterized. Safe because values are hardc
 | 7 | `read_json_from_file` no error handling | P1 | `productos.py:14-16` |
 | 8 | `duckdb.query()` no error handling | P1 | `app.py:264` |
 | 9 | Module-level side effects on every rerun ✅ Fixed | P1 | `app.py` → `@st.cache_resource` |
-| 10 | No test suite for non-trivial advisor logic | P1 | `recommendador.py` |
+| 10 | No test suite for non-trivial advisor logic ✅ Fixed | P1 | `tests/` |
 | 11 | `app.py` monolith (801 lines) ✅ Fixed | P1 | `app.py` → `queries.py`, `renderers.py` |
 | 12 | SQL rebuilt on every rerun ✅ Fixed | P1 | `app.py:204-245` |
 | 13 | Auto-open detail can't be dismissed for single result | P1 | `app.py:572-578` |

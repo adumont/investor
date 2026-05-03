@@ -1,12 +1,11 @@
 from streamlit import cache_data
 import json
+import requests
 
 from vars import CACHE_TTL
 
 
 def download_json_from_url(url):
-    import requests
-
     response = requests.get(url)
     return response.json()
 
@@ -46,9 +45,14 @@ def get_df_productos(productos):
 
 @cache_data(show_spinner=False, ttl=CACHE_TTL)
 def get_listas_opciones(_df_productos, data_version: str):
+    return _extract_options(_df_productos)
+
+
+def _extract_options(df) -> tuple:
+    """Core logic without cache decorator. Testable directly."""
 
     DIVISAS = (
-        _df_productos["divisasDto"]
+        df["divisasDto"]
         .apply(
             lambda x: (
                 x.get("codigo") if isinstance(x, dict) and x.get("codigo") else None
@@ -58,7 +62,7 @@ def get_listas_opciones(_df_productos, data_version: str):
         .unique()
     )
 
-    TIPOS_PRODUCTO = _df_productos["tipoProductoEnum"].dropna().unique()
+    TIPOS_PRODUCTO = df["tipoProductoEnum"].dropna().unique()
 
     _STR_COLS = [
         "zonaGeografica",
@@ -68,9 +72,7 @@ def get_listas_opciones(_df_productos, data_version: str):
         "categoriaMstar",
         "entidadGestora",
     ]
-    _unique_map = _df_productos[_STR_COLS].agg(
-        lambda col: col.dropna().unique().tolist()
-    )
+    _unique_map = df[_STR_COLS].agg(lambda col: col.dropna().unique().tolist())
     ZONAS = _unique_map["zonaGeografica"]
     TIPO_ACTIVO = _unique_map["tipoActivo"]
     CATEGORIAS = _unique_map["categoria"]
@@ -79,15 +81,13 @@ def get_listas_opciones(_df_productos, data_version: str):
     GESTORAS = _unique_map["entidadGestora"]
 
     SECTORES = set()
-    for sector_list in _df_productos["listaSectores"].dropna():
+    for sector_list in df["listaSectores"].dropna():
         if isinstance(sector_list, list):
             for s in sector_list:
                 nombre = s.get("nombre")
                 if nombre:
                     SECTORES.add(nombre)
 
-    # map(lambda, tuple) applies casefold-sort to each element,
-    # then tuple() rewraps results to preserve original order.
     return tuple(
         map(
             lambda x: sorted(x, key=lambda s: str(s).strip().casefold()),

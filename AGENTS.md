@@ -35,7 +35,8 @@ uv run streamlit run src/app.py
 **NEVER** launch streamlit to test (`.venv\Scripts\streamlit run app.py ...`). Hangs terminal, never exits.
 Lint: `uv run ruff check --fix .`
 Format: `uv run ruff format .`
-Run both before commits. No obvious errors pushed.
+Test: `uv run pytest tests/ -v`
+Run lint + test before commits. No obvious errors pushed.
 
 ## Dependencies
 
@@ -71,9 +72,20 @@ Manage with `uv`: `uv sync`, `uv add <pkg>`, `uv run <cmd>`.
 - Sector filter uses DuckDB UNNEST on nested JSON arrays.
 - Spanish locale strings in UI and data.
 
-## Adding tests (future)
+## Testing
 
-No test framework configured. If adding tests:
+Framework: pytest. Config in `pyproject.toml`.
+Tests: `tests/`. Fixtures in `tests/conftest.py`.
+
+| File | Tests |
+|---|---|
+| `tests/test_recommendador.py` | `_to_float`, `_nearest_lower_horizon`, `_build_candidate`, correlation, volatility, `recommend_mix` |
+| `tests/test_queries.py` | SQL generation: filters, sectors, name search |
+| `tests/test_productos.py` | JSON read, DataFrame build, option extraction, download mock |
+
+Run: `uv run pytest tests/ -v`
+
+### Adding tests
 - Mock `get_productos()` to avoid API calls.
 - Test `src/recommendador.py` logic: parser, feasibility, score fallback.
 - Use `data/myinvestor.json` as fixture data.

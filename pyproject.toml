@@ -13,9 +13,13 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "ruff",
+    "pytest",
 ]
 
 [dependency-groups]
 dev = [
     "pre-commit>=4.6.0",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
