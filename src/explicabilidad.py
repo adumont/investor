@@ -16,7 +16,7 @@ def build_recommendation_explanation(recommendation: dict[str, Any]) -> str:
     excluded = recommendation.get("excluded") or []
 
     lines = [
-        f"Horizonte solicitado: {horizon} anos. Regla aplicada: horizonte inferior mas cercano ({bucket}Y).",
+        f"Horizonte solicitado: {horizon} años. Regla aplicada: horizonte inferior más cercano ({bucket}Y).",
         f"Objetivo: maximizar rentabilidad neta ajustada por riesgo = retorno esperado - TER - {risk_aversion:.2f} x volatilidad.",
         f"Rentabilidad esperada bruta cartera: {_pct(float(portfolio.get('expected_gross', 0.0)))}.",
         f"Impacto TER agregado: -{_pct(float(portfolio.get('ter_drag', 0.0)))}.",
