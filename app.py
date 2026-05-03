@@ -271,6 +271,8 @@ with st.expander("Asesor MIX (beta)", expanded=False):
             step=0.05,
         )
 
+        import altair as alt
+
         if selected_mix_isins:
             try:
                 recommendation = recommend_mix(
