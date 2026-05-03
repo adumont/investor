@@ -519,33 +519,40 @@ def render_rentabilidad(producto):
         with cols[0]:
             st.altair_chart(chart, width="stretch")
 
-    # now, same with YearUno, YearTres and YearCinco, but as YoY a 1, 3, y 5 años (Year over Year)
-    yoy_rentabilidades = []
-    for span, label in [
-        ("yearUno", "1 año"),
-        ("yearTres", "3 años"),
-        ("yearCinco", "5 años"),
+    # Rentabilidad anual a 1, 3, 5 años + volatilidad overlay
+    yoy_data = []
+    for (ret_span, vol_span), label in [
+        (("yearUno", "volatilidadYearUno"), "1 año"),
+        (("yearTres", "volatilidadYearTres"), "3 años"),
+        (("yearCinco", "volatilidadYearCinco"), "5 años"),
     ]:
-        value = producto.get(span)
-        if value is not None:
-            yoy_rentabilidades.append((label, value))
-    if yoy_rentabilidades:
-        df_yoy = pd.DataFrame(yoy_rentabilidades, columns=["Periodo", "Rentabilidad"])
-        chart_yoy = (
-            alt.Chart(df_yoy)
-            .mark_bar()
-            .encode(
-                x=alt.X("Periodo:O", axis=alt.Axis(labelAngle=0)),
-                y="Rentabilidad:Q",
-                color=alt.condition(
-                    alt.datum.Rentabilidad > 0,
-                    alt.value("green"),  # Color for positive
-                    alt.value("red"),  # Color for negative
-                ),
-                tooltip=["Periodo", "Rentabilidad"],
-            )
-            .properties(title="Rentabilidad anual a 1, 3 y 5 años")
+        yoy_data.append(
+            (label, producto.get(ret_span), producto.get(vol_span))
         )
+    df_yoy = pd.DataFrame(yoy_data, columns=["Periodo", "Rentabilidad", "Volatilidad"])
+    df_yoy = df_yoy.dropna(subset=["Rentabilidad", "Volatilidad"], how="all")
+    if not df_yoy.empty:
+        base = alt.Chart(df_yoy).encode(
+            x=alt.X("Periodo:O", axis=alt.Axis(labelAngle=0))
+        )
+        bars = base.mark_bar().encode(
+            y=alt.Y("Rentabilidad:Q", title="%"),
+            color=alt.condition(
+                alt.datum.Rentabilidad > 0,
+                alt.value("green"),
+                alt.value("red"),
+            ),
+        )
+        line = base.mark_line(point=True, color="orange", strokeWidth=2).encode(
+            y=alt.Y("Volatilidad:Q", title="%"),
+        )
+        chart_yoy = alt.layer(bars, line).encode(
+            tooltip=[
+                alt.Tooltip("Periodo:N"),
+                alt.Tooltip("Rentabilidad:Q", format=".2f", title="Rentab %"),
+                alt.Tooltip("Volatilidad:Q", format=".2f", title="Vol %"),
+            ]
+        ).properties(title="Rentabilidad anual y Volatilidad a 1, 3, 5 años")
         with cols[1]:
             st.altair_chart(chart_yoy, width="stretch")
 
