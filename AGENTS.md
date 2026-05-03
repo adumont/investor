@@ -31,16 +31,15 @@ python -m streamlit run app.py
 ```
 
 **NEVER** launch streamlit to test (`.venv\Scripts\streamlit run app.py ...`). Hangs terminal, never exits.
-Use `.venv\Scripts\python -m py_compile <file>.py` for syntax checks.
-Always check syntax before ending change.
-
-No tests. No lint. No typecheck. No formatter configured.
+Lint: `.venv\Scripts\ruff check --fix .`
+Format: `.venv\Scripts\ruff format .`
+Run both before commits. No obvious errors pushed.
 
 `.venv/` exists. Activate before running.
 
 ## Dependencies
 
-`requirements.txt`: streamlit, pandas, duckdb, dotenv, pip-tools.
+`requirements.txt`: streamlit, pandas, duckdb, dotenv, pip-tools, ruff.
 
 `pip-tools` present but no `requirements.in`. Ignore pip-compile workflow.
 
