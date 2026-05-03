@@ -198,24 +198,28 @@ Filter dropdowns appeared in arbitrary API order. Additionally, `" PARETO ASSET 
 
 ## 3. Architecture
 
-### 3.1 `app.py` is a monolith (801 lines) — P1
+### 3.1 `app.py` is a monolith (801 lines) — P1 ✅ Fixed
 
-All UI rendering, SQL generation, data fetching, and business logic live in one file. This makes the app hard to test and navigate.
+All UI rendering, SQL generation, and business logic lived in one file.
 
 **Remediation:**
-- Move SQL generation helpers to a separate module (e.g., `queries.py`).
-- Move render functions (`render_*`) to a `views/` package or `renderers.py`.
-- Keep `app.py` as orchestration only.
+- Moved SQL generation helpers to `queries.py` (`get_filtro_sql`, `get_filtro_sector_sql`, `get_sector_columns_sql`).
+- Moved all `render_*` functions and helpers (`to_float`, `format_text`, `has_value`, `format_percent_from_decimal`) to `renderers.py`.
+- `app.py` now serves as orchestration only (~290 lines).
 
-### 3.2 Module-level side effects in `app.py` — P1
+**Status:** Fixed. `app.py` reduced from 797 to ~290 lines. `queries.py` and `renderers.py` created.
+
+### 3.2 Module-level side effects in `app.py` — P1 ✅ Fixed
 
 **File:** `app.py:54-68`
 
-Data fetching (`get_productos()`), DataFrame construction, and option list generation happen at module level. Every Streamlit rerun re-executes top-level code. Caching in `get_productos()` prevents repeated API calls, but the entire filter setup runs on every rerun regardless.
+Data fetching (`get_productos()`), DataFrame construction, and option list generation happened at module level. Every Streamlit rerun re-executed top-level code.
 
 **Remediation:**
-- Wrap initialization in `@st.cache_resource` or use `st.session_state` for one-time setup.
-- Consider `if "df_productos" not in st.session_state:` guard.
+- Wrapped initialization in `@st.cache_resource` function `init_app_data()`.
+- On rerun, Streamlit reruns the script but `@st.cache_resource` returns cached result without re-executing the init logic.
+
+**Status:** Fixed. Module-level side effects eliminated. `init_app_data()` uses `@st.cache_resource` to run once per session.
 
 ### 3.3 No separation between data layer and presentation — P1
 
@@ -469,9 +473,9 @@ SQL is embedded in Python dict. Not parameterized. Safe because values are hardc
 | 6 | No HTTP status check before `.json()` | P1 | `productos.py:10` |
 | 7 | `read_json_from_file` no error handling | P1 | `productos.py:14-16` |
 | 8 | `duckdb.query()` no error handling | P1 | `app.py:264` |
-| 9 | Module-level side effects on every rerun | P1 | `app.py:54-68` |
+| 9 | Module-level side effects on every rerun ✅ Fixed | P1 | `app.py` → `@st.cache_resource` |
 | 10 | No test suite for non-trivial advisor logic | P1 | `recommendador.py` |
-| 11 | `app.py` monolith (801 lines) | P1 | `app.py` |
+| 11 | `app.py` monolith (801 lines) ✅ Fixed | P1 | `app.py` → `queries.py`, `renderers.py` |
 | 12 | SQL rebuilt on every rerun ✅ Fixed | P1 | `app.py:204-245` |
 | 13 | Auto-open detail can't be dismissed for single result | P1 | `app.py:572-578` |
 | 14 | `@cache_data` ignores stale data after refresh ✅ Fixed | P1 | `productos.py:42, app.py:147,287` |
