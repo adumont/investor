@@ -4,7 +4,7 @@ import os
 import requests
 from dotenv import load_dotenv
 
-from vars import CACHE_TTL, MYINVESTOR_API_URL
+from vars import CACHE_TTL, MYINVESTOR_API_BASE_URL
 
 load_dotenv()
 
@@ -27,7 +27,9 @@ def get_productos():
 
     date_time = datetime.now(ZoneInfo("Europe/Madrid")).strftime("%d/%m/%Y %H:%M (%Z)")
     try:
-        url = os.getenv("MYINVESTOR_API_URL", MYINVESTOR_API_URL)
+        base_url = os.getenv("MYINVESTOR_API_BASE_URL", MYINVESTOR_API_BASE_URL)
+        token = os.getenv("MYINVESTOR_API_TOKEN", "")
+        url = base_url + token
         productos = download_json_from_url(url)
         print(
             f"Datos descargados correctamente, {len(productos)} productos, fecha y hora de descarga: {date_time}"
