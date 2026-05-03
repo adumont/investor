@@ -32,7 +32,7 @@ from renderers import (
     render_general_info,
     render_general_info_tabla,
     render_rentabilidad,
-    format_percent_from_decimal,
+    render_mix_recommendation,
 )
 
 load_dotenv()
@@ -285,8 +285,6 @@ with st.expander("Asesor MIX (beta)", expanded=False):
             step=0.05,
         )
 
-        import altair as alt
-
         if selected_mix_isins:
             try:
                 recommendation = recommend_mix(
@@ -296,115 +294,9 @@ with st.expander("Asesor MIX (beta)", expanded=False):
                     min_weight=min_weight_pct / 100.0,
                     risk_aversion=float(risk_aversion),
                 )
-
                 simulation = build_simulation(recommendation, int(horizon_years))
                 explanation_md = build_recommendation_explanation(recommendation)
-
-                portfolio = recommendation["portfolio"]
-                metric_cols = st.columns(4)
-                metric_cols[0].metric(
-                    "Rentabilidad neta esperada",
-                    format_percent_from_decimal(portfolio["net_expected"]),
-                )
-                metric_cols[1].metric(
-                    "TER agregado",
-                    format_percent_from_decimal(portfolio["ter_drag"]),
-                )
-                metric_cols[2].metric(
-                    "Volatilidad proxy",
-                    format_percent_from_decimal(portfolio["volatility_proxy"]),
-                )
-                metric_cols[3].metric(
-                    "Horizonte usado",
-                    f"{recommendation['horizon_bucket']}Y",
-                )
-
-                st.subheader("Asignación recomendada")
-                allocations_df = pd.DataFrame(recommendation["allocations"])
-                allocations_view = allocations_df[
-                    [
-                        "isin",
-                        "nombre",
-                        "weight",
-                        "expected_return",
-                        "ter",
-                        "volatility",
-                        "raw_score",
-                    ]
-                ].rename(
-                    columns={
-                        "isin": "ISIN",
-                        "nombre": "Nombre",
-                        "weight": "Peso",
-                        "expected_return": "Rentabilidad esperada",
-                        "ter": "TER",
-                        "volatility": "Volatilidad",
-                        "raw_score": "Score",
-                    }
-                )
-                for col in ["Peso", "Rentabilidad esperada", "TER", "Volatilidad"]:
-                    allocations_view[col] = allocations_view[col].map(
-                        format_percent_from_decimal
-                    )
-                st.dataframe(allocations_view, hide_index=True, width="stretch")
-
-                st.subheader("Explicación de recomendación")
-                st.markdown(explanation_md)
-
-                st.subheader("Simulación de escenarios")
-                sim_paths_df = pd.DataFrame(simulation["paths"])
-                if not sim_paths_df.empty:
-                    scenario_chart = (
-                        alt.Chart(sim_paths_df)
-                        .mark_line(point=True)
-                        .encode(
-                            x=alt.X("year:O", title="Año"),
-                            y=alt.Y(
-                                "cumulative_return:Q",
-                                title="Rentabilidad acumulada",
-                                axis=alt.Axis(format=".0%"),
-                            ),
-                            color=alt.Color("scenario:N", title="Escenario"),
-                            tooltip=[
-                                "scenario",
-                                "year",
-                                alt.Tooltip("annual_return:Q", format=".2%"),
-                                alt.Tooltip("cumulative_return:Q", format=".2%"),
-                            ],
-                        )
-                    )
-                    st.altair_chart(scenario_chart, width="stretch")
-
-                historical_proxy_df = pd.DataFrame(simulation["historical_proxy"])
-                if not historical_proxy_df.empty:
-                    st.caption("Trayectoria proxy histórica (años disponibles)")
-                    historical_chart = (
-                        alt.Chart(historical_proxy_df)
-                        .mark_line(point=True, color="#1f77b4")
-                        .encode(
-                            x=alt.X("year_index:O", title="Indice anual histórico"),
-                            y=alt.Y(
-                                "cumulative_return:Q",
-                                title="Rentabilidad acumulada",
-                                axis=alt.Axis(format=".0%"),
-                            ),
-                            tooltip=[
-                                "year_index",
-                                alt.Tooltip("coverage_weight:Q", format=".0%"),
-                                alt.Tooltip("annual_return:Q", format=".2%"),
-                                alt.Tooltip("cumulative_return:Q", format=".2%"),
-                            ],
-                        )
-                    )
-                    st.altair_chart(historical_chart, width="stretch")
-
-                if recommendation["excluded"]:
-                    excluded_df = pd.DataFrame(recommendation["excluded"])
-                    st.warning(
-                        "Algunos productos fueron excluidos por datos incompletos."
-                    )
-                    st.dataframe(excluded_df, hide_index=True, width="stretch")
-
+                render_mix_recommendation(recommendation, simulation, explanation_md)
             except RecommendationError as err:
                 st.error(f"No se pudo calcular recomendación: {err}")
         else:

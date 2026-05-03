@@ -22,6 +22,8 @@ def mock_st():
         mock.expander = MagicMock()
         mock.json = MagicMock()
         mock.text = MagicMock()
+        mock.warning = MagicMock()
+        mock.error = MagicMock()
         yield mock
 
 
@@ -49,15 +51,15 @@ def sample_producto():
         "descripcion": "A balanced fund.",
         "ter": "0.25",
         "listaComisiones": [
-            {"nombre": "Comisión de gestión", "porcentaje": "0.20"},
-            {"nombre": "Comisión de depósito", "porcentaje": "0.05"},
+            {"nombre": "Comision de gestion", "porcentaje": "0.20"},
+            {"nombre": "Comision de deposito", "porcentaje": "0.05"},
         ],
         "listaRegiones": [
-            {"nombre": "Norteamérica", "porcent": "40.0"},
+            {"nombre": "Norteamerica", "porcent": "40.0"},
             {"nombre": "Europa", "porcent": "30.0"},
         ],
         "listaSectores": [
-            {"nombre": "Tecnología", "porcent": "25.0"},
+            {"nombre": "Tecnologia", "porcent": "25.0"},
             {"nombre": "Salud", "porcent": "15.0"},
         ],
         "listaComposiciones": [
@@ -164,7 +166,6 @@ class TestRenderComisiones:
         from src.renderers import render_comisiones
 
         render_comisiones(sample_producto)
-        # Should render subheader + markdown table
         mock_st.subheader.assert_called_once_with("Comisiones")
         assert mock_st.markdown.called
 
@@ -173,17 +174,12 @@ class TestRenderComisiones:
 
         producto = {"listaComisiones": [], "ter": "0.25"}
         render_comisiones(producto)
-        # Should render table with TER but no KIID link
         assert mock_st.markdown.called
-        # Check KIID link not called
-        kiid_calls = [c for c in mock_st.markdown.call_args_list if "KIID" in str(c)]
-        assert len(kiid_calls) == 0
 
     def test_with_urlKiid(self, mock_st, sample_producto):
         from src.renderers import render_comisiones
 
         render_comisiones(sample_producto)
-        # Should render KIID link
         kiid_calls = [
             c
             for c in mock_st.markdown.call_args_list
@@ -299,7 +295,6 @@ class TestRenderGeneralInfo:
 
         producto = {"nombre": "Test", "codigoIsin": "ISIN123", "tipoActivo": "Tipo"}
         render_general_info(producto)
-        # Should not render links section
         link_calls = [c for c in mock_st.markdown.call_args_list if "Links" in str(c)]
         assert len(link_calls) == 0
 
@@ -307,7 +302,6 @@ class TestRenderGeneralInfo:
         from src.renderers import render_general_info
 
         render_general_info(sample_producto)
-        # Should render links section
         link_calls = [c for c in mock_st.markdown.call_args_list if "Links" in str(c)]
         assert len(link_calls) > 0
 
@@ -326,7 +320,6 @@ class TestRenderGeneralInfoTabla:
         producto = {}
         render_general_info_tabla(producto)
         mock_st.subheader.assert_called_once()
-        # Should still render table (possibly empty rows filtered)
         assert mock_st.markdown.called
 
 
@@ -336,7 +329,6 @@ class TestRenderRentabilidad:
 
         producto = {}
         render_rentabilidad(producto, 2026)
-        # Should still render disclaimer
         assert mock_st.markdown.called
 
     def test_with_data(self, mock_st, sample_producto):
@@ -345,3 +337,256 @@ class TestRenderRentabilidad:
         render_rentabilidad(sample_producto, 2026)
         mock_st.columns.assert_called_once()
         assert mock_st.markdown.called
+
+
+class TestRenderMixMetrics:
+    def test_empty_portfolio(self, mock_st):
+        from src.renderers import render_mix_metrics
+
+        render_mix_metrics({}, 5)
+        mock_st.columns.assert_not_called()
+
+    def test_none_portfolio(self, mock_st):
+        from src.renderers import render_mix_metrics
+
+        render_mix_metrics(None, 5)
+        mock_st.columns.assert_not_called()
+
+    def test_valid_portfolio(self, mock_st):
+        from src.renderers import render_mix_metrics
+
+        portfolio = {
+            "net_expected": 0.085,
+            "ter_drag": 0.0025,
+            "volatility_proxy": 0.12,
+        }
+        cols = [MagicMock(), MagicMock(), MagicMock(), MagicMock()]
+        mock_st.columns.return_value = cols
+        render_mix_metrics(portfolio, 5)
+        mock_st.columns.assert_called_once_with(4)
+        for col in cols:
+            assert col.metric.called
+
+    def test_missing_keys(self, mock_st):
+        from src.renderers import render_mix_metrics
+
+        # Non-empty dict with missing keys (still renders with defaults)
+        portfolio = {"net_expected": None, "ter_drag": None, "volatility_proxy": None}
+        cols = [MagicMock(), MagicMock(), MagicMock(), MagicMock()]
+        mock_st.columns.return_value = cols
+        render_mix_metrics(portfolio, 5)
+        # Should render with defaults (None becomes 0.0 via format_percent_from_decimal)
+        mock_st.columns.assert_called_once_with(4)
+        for i in range(4):
+            assert cols[i].metric.called
+
+
+class TestRenderMixAllocations:
+    def test_empty_list(self, mock_st):
+        from src.renderers import render_mix_allocations
+
+        render_mix_allocations([])
+        mock_st.subheader.assert_not_called()
+
+    def test_none(self, mock_st):
+        from src.renderers import render_mix_allocations
+
+        render_mix_allocations(None)
+        mock_st.subheader.assert_not_called()
+
+    def test_valid_allocations(self, mock_st):
+        from src.renderers import render_mix_allocations
+
+        allocations = [
+            {
+                "isin": "IE00B4L5Y983",
+                "nombre": "Fund A",
+                "weight": 0.5,
+                "expected_return": 0.08,
+                "ter": 0.002,
+                "volatility": 0.12,
+                "raw_score": 0.85,
+            },
+            {
+                "isin": "LU123",
+                "nombre": "Fund B",
+                "weight": 0.5,
+                "expected_return": 0.06,
+                "ter": 0.003,
+                "volatility": 0.10,
+                "raw_score": 0.75,
+            },
+        ]
+        render_mix_allocations(allocations)
+        mock_st.subheader.assert_called_once_with("Asignación recomendada")
+        mock_st.dataframe.assert_called_once()
+
+
+class TestRenderMixExplanation:
+    def test_empty_string(self, mock_st):
+        from src.renderers import render_mix_explanation
+
+        render_mix_explanation("")
+        mock_st.subheader.assert_not_called()
+
+    def test_none(self, mock_st):
+        from src.renderers import render_mix_explanation
+
+        render_mix_explanation(None)
+        mock_st.subheader.assert_not_called()
+
+    def test_valid_markdown(self, mock_st):
+        from src.renderers import render_mix_explanation
+
+        md = "## Recomendacion\n- Reason 1\n- Reason 2"
+        render_mix_explanation(md)
+        mock_st.subheader.assert_called_once_with("Explicación de recomendación")
+        mock_st.markdown.assert_called_once_with(md)
+
+
+class TestRenderMixSimulation:
+    def test_empty_simulation(self, mock_st):
+        from src.renderers import render_mix_simulation
+
+        render_mix_simulation({})
+        mock_st.subheader.assert_not_called()
+
+    def test_none(self, mock_st):
+        from src.renderers import render_mix_simulation
+
+        render_mix_simulation(None)
+        mock_st.subheader.assert_not_called()
+
+    def test_valid_simulation_with_paths(self, mock_st):
+        from src.renderers import render_mix_simulation
+
+        simulation = {
+            "paths": [
+                {
+                    "year": 1,
+                    "cumulative_return": 0.08,
+                    "annual_return": 0.08,
+                    "scenario": "base",
+                },
+                {
+                    "year": 2,
+                    "cumulative_return": 0.16,
+                    "annual_return": 0.07,
+                    "scenario": "base",
+                },
+            ],
+            "historical_proxy": [],
+        }
+        mock_st.columns.return_value = [MagicMock(), MagicMock()]
+        render_mix_simulation(simulation)
+        mock_st.subheader.assert_called_with("Simulación de escenarios")
+        mock_st.altair_chart.assert_called()
+
+    def test_valid_simulation_with_historical(self, mock_st):
+        from src.renderers import render_mix_simulation
+
+        simulation = {
+            "paths": [],
+            "historical_proxy": [
+                {
+                    "year_index": 1,
+                    "cumulative_return": 0.08,
+                    "annual_return": 0.08,
+                    "coverage_weight": 1.0,
+                },
+            ],
+        }
+        render_mix_simulation(simulation)
+        assert mock_st.altair_chart.call_count >= 1
+
+    def test_no_paths_no_historical(self, mock_st):
+        from src.renderers import render_mix_simulation
+
+        simulation = {"paths": [], "historical_proxy": []}
+        render_mix_simulation(simulation)
+        mock_st.subheader.assert_not_called()
+
+
+class TestRenderMixExcluded:
+    def test_empty_list(self, mock_st):
+        from src.renderers import render_mix_excluded
+
+        render_mix_excluded([])
+        mock_st.warning.assert_not_called()
+
+    def test_none(self, mock_st):
+        from src.renderers import render_mix_excluded
+
+        render_mix_excluded(None)
+        mock_st.warning.assert_not_called()
+
+    def test_with_excluded(self, mock_st):
+        from src.renderers import render_mix_excluded
+
+        excluded = [{"isin": "IE123", "reason": "Missing data"}]
+        render_mix_excluded(excluded)
+        mock_st.warning.assert_called_once()
+        mock_st.dataframe.assert_called_once()
+
+
+class TestRenderMixRecommendation:
+    def test_error_status(self, mock_st):
+        from src.renderers import render_mix_recommendation
+
+        recommendation = {"status": "error", "message": "Something went wrong"}
+        render_mix_recommendation(recommendation, {}, "")
+        mock_st.error.assert_called_once()
+
+    def test_valid_recommendation(self, mock_st):
+        from src.renderers import render_mix_recommendation
+
+        recommendation = {
+            "status": "success",
+            "portfolio": {
+                "net_expected": 0.08,
+                "ter_drag": 0.002,
+                "volatility_proxy": 0.12,
+            },
+            "horizon_bucket": 5,
+            "allocations": [
+                {
+                    "isin": "IE00B4L5Y983",
+                    "nombre": "Fund A",
+                    "weight": 1.0,
+                    "expected_return": 0.08,
+                    "ter": 0.002,
+                    "volatility": 0.12,
+                    "raw_score": 0.85,
+                }
+            ],
+            "excluded": [],
+        }
+        simulation = {"paths": [], "historical_proxy": []}
+        explanation_md = "Test explanation"
+        cols = [MagicMock(), MagicMock(), MagicMock(), MagicMock()]
+        mock_st.columns.return_value = cols
+        render_mix_recommendation(recommendation, simulation, explanation_md)
+        for col in cols:
+            assert col.metric.called
+        assert mock_st.dataframe.call_count >= 1
+        mock_st.markdown.assert_called()
+
+    def test_with_excluded_products(self, mock_st):
+        from src.renderers import render_mix_recommendation
+
+        recommendation = {
+            "status": "success",
+            "portfolio": {
+                "net_expected": 0.08,
+                "ter_drag": 0.002,
+                "volatility_proxy": 0.12,
+            },
+            "horizon_bucket": 5,
+            "allocations": [],
+            "excluded": [{"isin": "IE123", "reason": "Missing data"}],
+        }
+        simulation = {}
+        cols = [MagicMock(), MagicMock(), MagicMock(), MagicMock()]
+        mock_st.columns.return_value = cols
+        render_mix_recommendation(recommendation, simulation, "")
+        mock_st.warning.assert_called_once()

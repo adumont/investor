@@ -28,6 +28,8 @@ def has_value(value):
 
 
 def format_percent_from_decimal(value):
+    if value is None:
+        return "0.00%"
     return f"{value * 100:.2f}%"
 
 
@@ -281,3 +283,145 @@ def render_rentabilidad(producto, year: int):
         "<small>:grey[Rentabilidades pasadas no garantizan rentabilidades futuras. Invertir en fondos conlleva riesgo de pérdida de capital.]</small>",
         unsafe_allow_html=True,
     )
+
+
+def render_mix_metrics(portfolio, horizon_bucket):
+    """Render 4 metric columns for MIX recommendation."""
+    if not portfolio:
+        return
+    metric_cols = st.columns(4)
+    metric_cols[0].metric(
+        "Rentabilidad neta esperada",
+        format_percent_from_decimal(portfolio.get("net_expected", 0.0)),
+    )
+    metric_cols[1].metric(
+        "TER agregado",
+        format_percent_from_decimal(portfolio.get("ter_drag", 0.0)),
+    )
+    metric_cols[2].metric(
+        "Volatilidad proxy",
+        format_percent_from_decimal(portfolio.get("volatility_proxy", 0.0)),
+    )
+    metric_cols[3].metric(
+        "Horizonte usado",
+        f"{horizon_bucket}Y",
+    )
+
+
+def render_mix_allocations(allocations):
+    """Render allocation dataframe for MIX recommendation."""
+    if not allocations:
+        return
+    st.subheader("Asignación recomendada")
+    allocations_df = pd.DataFrame(allocations)
+    allocations_view = allocations_df[
+        [
+            "isin",
+            "nombre",
+            "weight",
+            "expected_return",
+            "ter",
+            "volatility",
+            "raw_score",
+        ]
+    ].rename(
+        columns={
+            "isin": "ISIN",
+            "nombre": "Nombre",
+            "weight": "Peso",
+            "expected_return": "Rentabilidad esperada",
+            "ter": "TER",
+            "volatility": "Volatilidad",
+            "raw_score": "Score",
+        }
+    )
+    for col in ["Peso", "Rentabilidad esperada", "TER", "Volatilidad"]:
+        allocations_view[col] = allocations_view[col].map(format_percent_from_decimal)
+    st.dataframe(allocations_view, hide_index=True, width="stretch")
+
+
+def render_mix_explanation(explanation_md):
+    """Render explanation markdown for MIX recommendation."""
+    if not explanation_md:
+        return
+    st.subheader("Explicación de recomendación")
+    st.markdown(explanation_md)
+
+
+def render_mix_simulation(simulation):
+    """Render simulation charts for MIX recommendation."""
+    if not simulation:
+        return
+    sim_paths_df = pd.DataFrame(simulation.get("paths", []))
+    historical_proxy_df = pd.DataFrame(simulation.get("historical_proxy", []))
+    if sim_paths_df.empty and historical_proxy_df.empty:
+        return
+    st.subheader("Simulación de escenarios")
+    if not sim_paths_df.empty:
+        scenario_chart = (
+            alt.Chart(sim_paths_df)
+            .mark_line(point=True)
+            .encode(
+                x=alt.X("year:O", title="Año"),
+                y=alt.Y(
+                    "cumulative_return:Q",
+                    title="Rentabilidad acumulada",
+                    axis=alt.Axis(format=".0%"),
+                ),
+                color=alt.Color("scenario:N", title="Escenario"),
+                tooltip=[
+                    "scenario",
+                    "year",
+                    alt.Tooltip("annual_return:Q", format=".2%"),
+                    alt.Tooltip("cumulative_return:Q", format=".2%"),
+                ],
+            )
+        )
+        st.altair_chart(scenario_chart, width="stretch")
+    historical_proxy_df = pd.DataFrame(simulation.get("historical_proxy", []))
+    if not historical_proxy_df.empty:
+        st.caption("Trayectoria proxy histórica (años disponibles)")
+        historical_chart = (
+            alt.Chart(historical_proxy_df)
+            .mark_line(point=True, color="#1f77b4")
+            .encode(
+                x=alt.X("year_index:O", title="Índice anual histórico"),
+                y=alt.Y(
+                    "cumulative_return:Q",
+                    title="Rentabilidad acumulada",
+                    axis=alt.Axis(format=".0%"),
+                ),
+                tooltip=[
+                    "year_index",
+                    alt.Tooltip("coverage_weight:Q", format=".0%"),
+                    alt.Tooltip("annual_return:Q", format=".2%"),
+                    alt.Tooltip("cumulative_return:Q", format=".2%"),
+                ],
+            )
+        )
+        st.altair_chart(historical_chart, width="stretch")
+
+
+def render_mix_excluded(excluded):
+    """Render excluded products warning and table."""
+    if not excluded:
+        return
+    excluded_df = pd.DataFrame(excluded)
+    st.warning("Algunos productos fueron excluidos por datos incompletos.")
+    st.dataframe(excluded_df, hide_index=True, width="stretch")
+
+
+def render_mix_recommendation(recommendation, simulation, explanation_md):
+    """Orchestrator for MIX recommendation rendering."""
+    if recommendation.get("status") == "error":
+        st.error(
+            f"No se pudo calcular recomendación: {recommendation.get('message', 'Error desconocido')}"
+        )
+        return
+    portfolio = recommendation.get("portfolio", {})
+    horizon_bucket = recommendation.get("horizon_bucket", 0)
+    render_mix_metrics(portfolio, horizon_bucket)
+    render_mix_allocations(recommendation.get("allocations", []))
+    render_mix_explanation(explanation_md)
+    render_mix_simulation(simulation)
+    render_mix_excluded(recommendation.get("excluded", []))
