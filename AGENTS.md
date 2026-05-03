@@ -15,19 +15,21 @@ Deployed: https://investor26.streamlit.app/
 
 | File | Role |
 |---|---|
-| `app.py` | Single entrypoint. Streamlit UI + all rendering. |
-| `productos.py` | Data fetch: API first, fallback to `myinvestor.json`. |
-| `recommendador.py` | MIX advisor: scoring, constraints, weight allocation. |
-| `simulacion.py` | Scenario simulation + historical proxy paths. |
-| `explicabilidad.py` | Human-readable recommendation rationale. |
-| `vars.py` | Constants: CACHE_TTL (6h), local file path/timestamp. |
-| `myinvestor.json` | Local product snapshot. Fallback when API unreachable. |
+| `src/app.py` | Single entrypoint. Streamlit UI + all rendering. |
+| `src/productos.py` | Data fetch: API first, fallback to `data/myinvestor.json`. |
+| `src/recommendador.py` | MIX advisor: scoring, constraints, weight allocation. |
+| `src/simulacion.py` | Scenario simulation + historical proxy paths. |
+| `src/explicabilidad.py` | Human-readable recommendation rationale. |
+| `src/vars.py` | Constants: CACHE_TTL (6h), local file path/timestamp. |
+| `src/queries.py` | SQL query builder for DuckDB filtering. |
+| `src/renderers.py` | UI rendering helpers for product detail views. |
+| `data/myinvestor.json` | Local product snapshot. Fallback when API unreachable. |
 | `ADVISOR.md` | Full MIX engine spec. Authoritative for optimizer logic. |
 
 ## Commands
 
 ```
-uv run streamlit run app.py
+uv run streamlit run src/app.py
 ```
 
 **NEVER** launch streamlit to test (`.venv\Scripts\streamlit run app.py ...`). Hangs terminal, never exits.
@@ -43,10 +45,10 @@ Manage with `uv`: `uv sync`, `uv add <pkg>`, `uv run <cmd>`.
 
 ## Data flow
 
-1. `get_productos()` tries MyInvestor API. Falls back to `myinvestor.json`.
-2. `myinvestor.json` snapshot date tracked in `vars.py::LOCAL_FILE_TIMESTAMP`.
+1. `get_productos()` tries MyInvestor API. Falls back to `data/myinvestor.json`.
+2. `data/myinvestor.json` snapshot date tracked in `src/vars.py::LOCAL_FILE_TIMESTAMP`.
 3. Results cached 6 hours (`CACHE_TTL`).
-4. `duckdb` queries DataFrame for filtering/sorting. SQL built dynamically in `app.py`.
+4. `duckdb` queries DataFrame for filtering/sorting. SQL built dynamically in `src/app.py`.
 
 ## MIX advisor rules
 
@@ -73,6 +75,6 @@ Manage with `uv`: `uv sync`, `uv add <pkg>`, `uv run <cmd>`.
 
 No test framework configured. If adding tests:
 - Mock `get_productos()` to avoid API calls.
-- Test `recommendador.py` logic: parser, feasibility, score fallback.
-- Use `myinvestor.json` as fixture data.
+- Test `src/recommendador.py` logic: parser, feasibility, score fallback.
+- Use `data/myinvestor.json` as fixture data.
 - `ADVISOR.md` §Extension Path lists desired test coverage areas.

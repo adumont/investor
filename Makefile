@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := run
 
 run:
-	uv run streamlit run app.py
+	uv run streamlit run src/app.py
 
 ruff:
 	uv run ruff check --fix .
