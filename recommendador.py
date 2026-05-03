@@ -145,11 +145,19 @@ def _portfolio_volatility(candidates: list[Candidate], weights: list[float]) -> 
     var = 0.0
     for i in range(n):
         for j in range(n):
-            var += weights[i] * weights[j] * corr[i][j] * candidates[i].volatility * candidates[j].volatility
+            var += (
+                weights[i]
+                * weights[j]
+                * corr[i][j]
+                * candidates[i].volatility
+                * candidates[j].volatility
+            )
     return sqrt(max(var, 0.0))
 
 
-def _build_candidate(producto: dict[str, Any], horizon_bucket: int) -> tuple[Candidate | None, str | None]:
+def _build_candidate(
+    producto: dict[str, Any], horizon_bucket: int
+) -> tuple[Candidate | None, str | None]:
     isin = str(producto.get("codigoIsin") or "").strip()
     nombre = str(producto.get("nombre") or isin)
 
@@ -167,7 +175,9 @@ def _build_candidate(producto: dict[str, Any], horizon_bucket: int) -> tuple[Can
 
     risk_score = _to_float(producto.get("indicadorRiesgo"), 0.0) or 0.0
     history_returns = _extract_history_returns(producto)
-    categoria = _non_empty_str(producto.get("categoriaMstar")) or _non_empty_str(producto.get("categoria"))
+    categoria = _non_empty_str(producto.get("categoriaMstar")) or _non_empty_str(
+        producto.get("categoria")
+    )
     zona = _non_empty_str(producto.get("zonaGeografica"))
     tipo_activo = _non_empty_str(producto.get("tipoActivo"))
 
@@ -262,7 +272,9 @@ def recommend_mix(
         gross_contribution = weight * candidate.expected_return
         ter_contribution = weight * candidate.ter
         risk_contribution = weight * risk_aversion * candidate.volatility
-        objective_contribution = gross_contribution - ter_contribution - risk_contribution
+        objective_contribution = (
+            gross_contribution - ter_contribution - risk_contribution
+        )
 
         portfolio_expected_gross += gross_contribution
         portfolio_ter += ter_contribution

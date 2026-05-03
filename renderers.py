@@ -243,9 +243,7 @@ def render_rentabilidad(producto, year: int):
         (("yearTres", "volatilidadYearTres"), "3 años"),
         (("yearCinco", "volatilidadYearCinco"), "5 años"),
     ]:
-        yoy_data.append(
-            (label, producto.get(ret_span), producto.get(vol_span))
-        )
+        yoy_data.append((label, producto.get(ret_span), producto.get(vol_span)))
     df_yoy = pd.DataFrame(yoy_data, columns=["Periodo", "Rentabilidad", "Volatilidad"])
     df_yoy = df_yoy.dropna(subset=["Rentabilidad", "Volatilidad"], how="all")
     if not df_yoy.empty:
@@ -263,13 +261,17 @@ def render_rentabilidad(producto, year: int):
         line = base.mark_line(point=True, color="orange", strokeWidth=2).encode(
             y=alt.Y("Volatilidad:Q", title="%"),
         )
-        chart_yoy = alt.layer(bars, line).encode(
-            tooltip=[
-                alt.Tooltip("Periodo:N"),
-                alt.Tooltip("Rentabilidad:Q", format=".2f", title="Rentab %"),
-                alt.Tooltip("Volatilidad:Q", format=".2f", title="Vol %"),
-            ]
-        ).properties(title="Rentabilidad anual y Volatilidad a 1, 3, 5 años")
+        chart_yoy = (
+            alt.layer(bars, line)
+            .encode(
+                tooltip=[
+                    alt.Tooltip("Periodo:N"),
+                    alt.Tooltip("Rentabilidad:Q", format=".2f", title="Rentab %"),
+                    alt.Tooltip("Volatilidad:Q", format=".2f", title="Vol %"),
+                ]
+            )
+            .properties(title="Rentabilidad anual y Volatilidad a 1, 3, 5 años")
+        )
         with cols[1]:
             st.altair_chart(chart_yoy, width="stretch")
 

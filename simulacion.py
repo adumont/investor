@@ -3,7 +3,9 @@ from __future__ import annotations
 from typing import Any
 
 
-def _compound_path(annual_rate: float, years: int, start_capital: float = 1.0) -> list[dict[str, float]]:
+def _compound_path(
+    annual_rate: float, years: int, start_capital: float = 1.0
+) -> list[dict[str, float]]:
     value = float(start_capital)
     path = []
     for year in range(1, years + 1):
@@ -37,7 +39,9 @@ def _historical_proxy_path(
     allocations: list[dict[str, Any]], years: int
 ) -> list[dict[str, float]]:
     # Build weighted annual returns from oldest to newest using available history.
-    max_len = max((len(row.get("history_returns") or []) for row in allocations), default=0)
+    max_len = max(
+        (len(row.get("history_returns") or []) for row in allocations), default=0
+    )
     if max_len <= 0:
         return []
 

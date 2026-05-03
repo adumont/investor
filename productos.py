@@ -23,13 +23,18 @@ def get_productos():
 
     date_time = datetime.now(ZoneInfo("Europe/Madrid")).strftime("%d/%m/%Y %H:%M (%Z)")
     try:
-        productos=download_json_from_url("https://api.myinvestor.es/myinvestor-server/rest/public/fondos/find-fondos?tipo=TODOS&token=a2e8e18ad26a079c576038f0ad4fa18ce0d9e415f5bf6f43f89cf3831a0e4685__")
-        print(f"Datos descargados correctamente, {len(productos)} productos, fecha y hora de descarga: {date_time}")
+        productos = download_json_from_url(
+            "https://api.myinvestor.es/myinvestor-server/rest/public/fondos/find-fondos?tipo=TODOS&token=a2e8e18ad26a079c576038f0ad4fa18ce0d9e415f5bf6f43f89cf3831a0e4685__"
+        )
+        print(
+            f"Datos descargados correctamente, {len(productos)} productos, fecha y hora de descarga: {date_time}"
+        )
         return (date_time, productos)
     except Exception as e:
         print(f"Error al descargar datos: {e} - leyendo desde archivo local...")
 
     from vars import LOCAL_FILE, LOCAL_FILE_TIMESTAMP
+
     return (LOCAL_FILE_TIMESTAMP, read_json_from_file(LOCAL_FILE))
 
 
@@ -41,11 +46,17 @@ def get_df_productos(productos):
 
 @cache_data(show_spinner=False, ttl=CACHE_TTL)
 def get_listas_opciones(_df_productos, data_version: str):
-    import pandas as pd
 
-    DIVISAS = _df_productos["divisasDto"].apply(
-        lambda x: x.get("codigo") if isinstance(x, dict) and x.get("codigo") else None
-    ).dropna().unique()
+    DIVISAS = (
+        _df_productos["divisasDto"]
+        .apply(
+            lambda x: (
+                x.get("codigo") if isinstance(x, dict) and x.get("codigo") else None
+            )
+        )
+        .dropna()
+        .unique()
+    )
 
     TIPOS_PRODUCTO = _df_productos["tipoProductoEnum"].dropna().unique()
 
@@ -78,14 +89,18 @@ def get_listas_opciones(_df_productos, data_version: str):
     # map(lambda, tuple) applies casefold-sort to each element,
     # then tuple() rewraps results to preserve original order.
     return tuple(
-        map(lambda x: sorted(x, key=lambda s: str(s).strip().casefold()), (
-        DIVISAS,
-        ZONAS,
-        TIPOS_PRODUCTO,
-        CATEGORIAS,
-        CATEGORIAS_MYINVESTOR,
-        CATEGORIAS_MSTAR,
-        GESTORAS,
-        SECTORES,
-        TIPO_ACTIVO,
-    )))
+        map(
+            lambda x: sorted(x, key=lambda s: str(s).strip().casefold()),
+            (
+                DIVISAS,
+                ZONAS,
+                TIPOS_PRODUCTO,
+                CATEGORIAS,
+                CATEGORIAS_MYINVESTOR,
+                CATEGORIAS_MSTAR,
+                GESTORAS,
+                SECTORES,
+                TIPO_ACTIVO,
+            ),
+        )
+    )

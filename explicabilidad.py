@@ -30,7 +30,9 @@ def build_recommendation_explanation(recommendation: dict[str, Any]) -> str:
         lines.append(f"Mayor peso asignado a: {top_text}.")
 
     if excluded:
-        exclusion_text = "; ".join(f"{row['isin']}: {row['reason']}" for row in excluded)
+        exclusion_text = "; ".join(
+            f"{row['isin']}: {row['reason']}" for row in excluded
+        )
         lines.append(f"Productos excluidos por datos incompletos: {exclusion_text}.")
 
     lines.append(

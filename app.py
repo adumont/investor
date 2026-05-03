@@ -88,11 +88,15 @@ filter_state = FilterState(year=year)
 
 cols = st.columns(2)
 cols[0].title("Productos en MyInvestor")
-filter_state.filter_name = cols[1].text_input(
-    "Filtrar por nombre or por ISIN (SQL ILIKE)",
-    value="",
-    placeholder="Ejemplo: world, FR0000978371...",
-).strip()
+filter_state.filter_name = (
+    cols[1]
+    .text_input(
+        "Filtrar por nombre or por ISIN (SQL ILIKE)",
+        value="",
+        placeholder="Ejemplo: world, FR0000978371...",
+    )
+    .strip()
+)
 
 cols = st.columns(4)
 selected_filter = cols[0].selectbox(
@@ -107,7 +111,9 @@ filter_state.selected_producto = cols[2].multiselect(
     options=list(TIPOS_PRODUCTO),
     default=["FONDOS_INDEXADOS"],
 )
-filter_state.selected_gestora = cols[3].multiselect("Filtro por gestora:", options=list(GESTORAS))
+filter_state.selected_gestora = cols[3].multiselect(
+    "Filtro por gestora:", options=list(GESTORAS)
+)
 
 
 @st.cache_data(show_spinner=False)
@@ -144,7 +150,9 @@ with st.expander("Más filtros & Selección de columnas", expanded=False):
             "Mostrar rentabilidad media a 1,3,5 años", value=True
         )
         filter_state.show_categories = cols[1].toggle("Mostrar categorias", value=False)
-        filter_state.show_volatilidad = cols[2].toggle("Mostrar datos Volatilidad", value=False)
+        filter_state.show_volatilidad = cols[2].toggle(
+            "Mostrar datos Volatilidad", value=False
+        )
         filter_state.show_dias_desplazamiento = cols[3].toggle(
             "Mostrar días desplazamiento suscripción y reembolso", value=False
         )
@@ -209,7 +217,7 @@ if selected_isin:
     if not producto:
         st.warning("No se encontraron los detalles del producto seleccionado.")
     else:
-        with st.expander(f"Información del producto", expanded=True):
+        with st.expander("Información del producto", expanded=True):
             render_general_info(producto)
             render_rentabilidad(producto, year)
             cols = st.columns(2)
