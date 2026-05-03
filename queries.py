@@ -123,5 +123,5 @@ def build_product_query(f: FilterState) -> str:
         AND ( {get_filtro_sector_sql(f.selected_sector, f.threshold_sector)} ) -- filtro sector
         AND status = 'OPEN'
     { "GROUP BY codigoIsin, nombre, indicadorRiesgo, ter, ytd, rentabilidadPasadaUno, rentabilidadPasadaDos, rentabilidadPasadaTres, rentabilidadPasadaCuatro, rentabilidadPasadaCinco, yearUno, yearTres, yearCinco, volatilidadYearUno, volatilidadYearTres, volatilidadYearCinco, diasDesplazamientoSuscripcion, diasDesplazamientoReembolso, categoria, categoriaMyInvestor, categoriaMstar, trackingErrorYearUno, entidadGestora, divisasDto" if _use_unnest else "" }
-    ORDER BY indicadorRiesgo ASC, ter ASC, codigoIsin ASC
+    ORDER BY ter ASC, indicadorRiesgo ASC, codigoIsin ASC
     """
