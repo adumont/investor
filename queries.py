@@ -1,3 +1,30 @@
+from dataclasses import dataclass, field
+
+
+@dataclass
+class FilterState:
+    """Consolidated filter/selections state from the UI."""
+    year: int = 2026
+    show_rentabilidad_anios: bool = True
+    show_rentabilidad_media_135: bool = True
+    show_volatilidad: bool = False
+    show_dias_desplazamiento: bool = False
+    show_categories: bool = False
+    show_sectores: bool = False
+    selected_sector: list[str] = field(default_factory=list)
+    threshold_sector: int = 20
+    filter_name: str = ""
+    selected_filter_sql: str = "1=1"
+    selected_divisa: list[str] = field(default_factory=lambda: ["EUR"])
+    selected_zona: list[str] = field(default_factory=list)
+    selected_producto: list[str] = field(default_factory=lambda: ["FONDOS_INDEXADOS"])
+    selected_categoria: list[str] = field(default_factory=list)
+    selected_categoria_mstar: list[str] = field(default_factory=list)
+    selected_categoria_myinvestor: list[str] = field(default_factory=list)
+    selected_gestora: list[str] = field(default_factory=list)
+    selected_tipo_activo: list[str] = field(default_factory=list)
+
+
 def get_filtro_sql(field: str, options: list[str]):
     if not options or "Cualquiera" in options:
         return "1=1"
@@ -50,31 +77,11 @@ def build_name_filter_sql(filter_name: str) -> str:
     )
 
 
-def build_product_query(
-    year: int,
-    show_rentabilidad_anios: bool,
-    show_rentabilidad_media_135: bool,
-    show_volatilidad: bool,
-    show_dias_desplazamiento: bool,
-    show_categories: bool,
-    show_sectores: bool,
-    selected_sector: list[str],
-    threshold_sector: int,
-    filter_name: str,
-    selected_filter_sql: str,
-    selected_divisa: list[str],
-    selected_zona: list[str],
-    selected_producto: list[str],
-    selected_categoria: list[str],
-    selected_categoria_mstar: list[str],
-    selected_categoria_myinvestor: list[str],
-    selected_gestora: list[str],
-    selected_tipo_activo: list[str],
-) -> str:
-    """Build the main product SELECT query."""
-    _filter_name_sql = build_name_filter_sql(filter_name)
-    _sector_cols = get_sector_columns_sql(selected_sector) if show_sectores else ""
-    _use_unnest = show_sectores and bool(selected_sector)
+def build_product_query(f: FilterState) -> str:
+    """Build the main product SELECT query from FilterState."""
+    _filter_name_sql = build_name_filter_sql(f.filter_name)
+    _sector_cols = get_sector_columns_sql(f.selected_sector) if f.show_sectores else ""
+    _use_unnest = f.show_sectores and bool(f.selected_sector)
 
     return f"""
     SELECT
@@ -82,20 +89,20 @@ def build_product_query(
         nombre,
         indicadorRiesgo as Risk,
         ter as TER,
-        ytd as "{ year }",
-        { "" if show_rentabilidad_anios else "-- " }rentabilidadPasadaUno as "{ year - 1 }",
-        { "" if show_rentabilidad_anios else "-- " }rentabilidadPasadaDos as "{ year - 2 }",
-        { "" if show_rentabilidad_anios else "-- " }rentabilidadPasadaTres as "{ year - 3 }",
-        { "" if show_rentabilidad_anios else "-- " }rentabilidadPasadaCuatro as "{ year - 4 }",
-        { "" if show_rentabilidad_anios else "-- " }rentabilidadPasadaCinco as "{ year - 5 }",
-        { "" if show_rentabilidad_media_135 else "-- " }yearUno as "1Y",
-        { "" if show_rentabilidad_media_135 else "-- " }yearTres as "3Y",
-        { "" if show_rentabilidad_media_135 else "-- " }yearCinco as "5Y",
-        { "" if show_volatilidad else "-- " }volatilidadYearUno as "Vol 1Y",
-        { "" if show_volatilidad else "-- " }volatilidadYearTres as "Vol 3Y",
-        { "" if show_volatilidad else "-- " }volatilidadYearCinco as "Vol 5Y",
-        { "" if show_dias_desplazamiento else "-- " }diasDesplazamientoSuscripcion DiasS, diasDesplazamientoReembolso DiasR,
-        { "" if show_categories else "-- " }categoria, categoriaMyInvestor, categoriaMstar,
+        ytd as "{ f.year }",
+        { "" if f.show_rentabilidad_anios else "-- " }rentabilidadPasadaUno as "{ f.year - 1 }",
+        { "" if f.show_rentabilidad_anios else "-- " }rentabilidadPasadaDos as "{ f.year - 2 }",
+        { "" if f.show_rentabilidad_anios else "-- " }rentabilidadPasadaTres as "{ f.year - 3 }",
+        { "" if f.show_rentabilidad_anios else "-- " }rentabilidadPasadaCuatro as "{ f.year - 4 }",
+        { "" if f.show_rentabilidad_anios else "-- " }rentabilidadPasadaCinco as "{ f.year - 5 }",
+        { "" if f.show_rentabilidad_media_135 else "-- " }yearUno as "1Y",
+        { "" if f.show_rentabilidad_media_135 else "-- " }yearTres as "3Y",
+        { "" if f.show_rentabilidad_media_135 else "-- " }yearCinco as "5Y",
+        { "" if f.show_volatilidad else "-- " }volatilidadYearUno as "Vol 1Y",
+        { "" if f.show_volatilidad else "-- " }volatilidadYearTres as "Vol 3Y",
+        { "" if f.show_volatilidad else "-- " }volatilidadYearCinco as "Vol 5Y",
+        { "" if f.show_dias_desplazamiento else "-- " }diasDesplazamientoSuscripcion DiasS, diasDesplazamientoReembolso DiasR,
+        { "" if f.show_categories else "-- " }categoria, categoriaMyInvestor, categoriaMstar,
         trackingErrorYearUno as TE_1Y,
         entidadGestora as Gestora,
         divisasDto.codigo AS divisa
@@ -104,17 +111,17 @@ def build_product_query(
         {"LEFT JOIN UNNEST(listaSectores) AS t(s) ON TRUE" if _use_unnest else ""}
     WHERE
         ( {_filter_name_sql} ) -- filtro por nombre/ISIN
-        AND ( {selected_filter_sql} ) -- filtro rapido
-        AND ( {get_filtro_sql("divisa", selected_divisa)} ) -- filtro divisa
-        AND ( {get_filtro_sql("zonaGeografica", selected_zona)} ) -- filtro zona geografica
-        AND ( {get_filtro_sql("tipoProductoEnum", selected_producto)} ) -- filtro tipo de producto
-        AND ( {get_filtro_sql("categoria", selected_categoria)} ) -- filtro categoria
-        AND ( {get_filtro_sql("categoriaMstar", selected_categoria_mstar)} ) -- filtro categoria Morningstar
-        AND ( {get_filtro_sql("categoriaMyInvestor", selected_categoria_myinvestor)} ) -- filtro categoria MyInvestor
-        AND ( {get_filtro_sql("entidadGestora", selected_gestora)} ) -- filtro gestora
-        AND ( {get_filtro_sql("tipoActivo", selected_tipo_activo)} ) -- filtro tipo de activo
-        AND ( {get_filtro_sector_sql(selected_sector, threshold_sector)} ) -- filtro sector
+        AND ( {f.selected_filter_sql} ) -- filtro rapido
+        AND ( {get_filtro_sql("divisa", f.selected_divisa)} ) -- filtro divisa
+        AND ( {get_filtro_sql("zonaGeografica", f.selected_zona)} ) -- filtro zona geografica
+        AND ( {get_filtro_sql("tipoProductoEnum", f.selected_producto)} ) -- filtro tipo de producto
+        AND ( {get_filtro_sql("categoria", f.selected_categoria)} ) -- filtro categoria
+        AND ( {get_filtro_sql("categoriaMstar", f.selected_categoria_mstar)} ) -- filtro categoria Morningstar
+        AND ( {get_filtro_sql("categoriaMyInvestor", f.selected_categoria_myinvestor)} ) -- filtro categoria MyInvestor
+        AND ( {get_filtro_sql("entidadGestora", f.selected_gestora)} ) -- filtro gestora
+        AND ( {get_filtro_sql("tipoActivo", f.selected_tipo_activo)} ) -- filtro tipo de activo
+        AND ( {get_filtro_sector_sql(f.selected_sector, f.threshold_sector)} ) -- filtro sector
         AND status = 'OPEN'
     { "GROUP BY codigoIsin, nombre, indicadorRiesgo, ter, ytd, rentabilidadPasadaUno, rentabilidadPasadaDos, rentabilidadPasadaTres, rentabilidadPasadaCuatro, rentabilidadPasadaCinco, yearUno, yearTres, yearCinco, volatilidadYearUno, volatilidadYearTres, volatilidadYearCinco, diasDesplazamientoSuscripcion, diasDesplazamientoReembolso, categoria, categoriaMyInvestor, categoriaMstar, trackingErrorYearUno, entidadGestora, divisasDto" if _use_unnest else "" }
-    ORDER BY ter ASC, codigoIsin ASC
+    ORDER BY indicadorRiesgo ASC, ter ASC, codigoIsin ASC
     """

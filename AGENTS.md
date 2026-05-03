@@ -30,6 +30,9 @@ Deployed: https://investor26.streamlit.app/
 python -m streamlit run app.py
 ```
 
+**NEVER** launch streamlit to test (`.venv\Scripts\streamlit run app.py ...`). Hangs terminal, never exits.
+Use `.venv\Scripts\python -m py_compile <file>.py` for syntax checks.
+
 No tests. No lint. No typecheck. No formatter configured.
 
 `.venv/` exists. Activate before running.

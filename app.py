@@ -15,10 +15,8 @@ from recommendador import recommend_mix, RecommendationError
 from simulacion import build_simulation
 from explicabilidad import build_recommendation_explanation
 from queries import (
-    get_filtro_sql,
-    get_filtro_sector_sql,
-    get_sector_columns_sql,
     build_product_query,
+    FilterState,
 )
 from renderers import (
     render_comisiones,
@@ -85,28 +83,31 @@ df_productos = data["df_productos"]
 
 year = date.today().year
 
+# Initialize FilterState early, defaults in class
+filter_state = FilterState(year=year)
+
 cols = st.columns(2)
 cols[0].title("Productos en MyInvestor")
-filter_name = cols[1].text_input(
+filter_state.filter_name = cols[1].text_input(
     "Filtrar por nombre or por ISIN (SQL ILIKE)",
     value="",
     placeholder="Ejemplo: world, FR0000978371...",
-)
-filter_name = filter_name.strip()
+).strip()
 
 cols = st.columns(4)
 selected_filter = cols[0].selectbox(
     "Filtro rápido:", options=list(FILTROS_RAPIDOS.keys())
 )
-selected_divisa = cols[1].multiselect(
+filter_state.selected_filter_sql = FILTROS_RAPIDOS[selected_filter]
+filter_state.selected_divisa = cols[1].multiselect(
     "Filtro por divisa", options=list(DIVISAS), default=["EUR"]
 )
-selected_producto = cols[2].multiselect(
+filter_state.selected_producto = cols[2].multiselect(
     "Filtro por tipo de producto",
     options=list(TIPOS_PRODUCTO),
     default=["FONDOS_INDEXADOS"],
 )
-selected_gestora = cols[3].multiselect("Filtro por gestora:", options=list(GESTORAS))
+filter_state.selected_gestora = cols[3].multiselect("Filtro por gestora:", options=list(GESTORAS))
 
 
 @st.cache_data(show_spinner=False)
@@ -117,78 +118,58 @@ def run_query(_df_productos, query: str, data_version: str) -> pd.DataFrame:
 with st.expander("Más filtros & Selección de columnas", expanded=False):
     with st.container():
         cols = st.columns(4)
-        selected_categoria = cols[0].multiselect(
+        filter_state.selected_categoria = cols[0].multiselect(
             "Filtro por categoría", options=list(CATEGORIAS)
         )
-        selected_tipo_activo = cols[0].multiselect(
+        filter_state.selected_tipo_activo = cols[0].multiselect(
             "Filtro por tipo de activo", options=list(TIPO_ACTIVO)
         )
-        selected_categoria_myinvestor = cols[1].multiselect(
+        filter_state.selected_categoria_myinvestor = cols[1].multiselect(
             "Filtro por categoría MyInvestor",
             options=list(CATEGORIAS_MYINVESTOR),
         )
-        selected_categoria_mstar = cols[2].multiselect(
+        filter_state.selected_categoria_mstar = cols[2].multiselect(
             "Filtro por categoría Morningstar", options=list(CATEGORIAS_MSTAR)
         )
-        selected_zona = cols[3].multiselect(
+        filter_state.selected_zona = cols[3].multiselect(
             "Filtro por zona geográfica", options=list(ZONAS)
         )
 
     with st.container():
         cols = st.columns(4)
-        show_rentabilidad_anios = cols[0].toggle(
+        filter_state.show_rentabilidad_anios = cols[0].toggle(
             "Mostrar rentabilidad ultimos 6 años", value=True
         )
-        show_rentabilidad_media_135 = cols[0].toggle(
+        filter_state.show_rentabilidad_media_135 = cols[0].toggle(
             "Mostrar rentabilidad media a 1,3,5 años", value=True
         )
-        show_categories = cols[1].toggle("Mostrar categorias", value=False)
-        show_volatilidad = cols[2].toggle("Mostrar datos Volatilidad", value=False)
-        show_dias_desplazamiento = cols[3].toggle(
+        filter_state.show_categories = cols[1].toggle("Mostrar categorias", value=False)
+        filter_state.show_volatilidad = cols[2].toggle("Mostrar datos Volatilidad", value=False)
+        filter_state.show_dias_desplazamiento = cols[3].toggle(
             "Mostrar días desplazamiento suscripción y reembolso", value=False
         )
 
     with st.container():
         cols = st.columns([2, 1, 1])
-        selected_sector = cols[0].multiselect(
+        filter_state.selected_sector = cols[0].multiselect(
             "Filtro por sector (al menos uno debe cumplir el umbral)",
             options=SECTORES,
         )
-        threshold_sector = cols[1].slider(
+        filter_state.threshold_sector = cols[1].slider(
             "Umbral mínimo del sector (%)",
             min_value=0,
             max_value=100,
             step=5,
             key="threshold_sector",
-            disabled=not selected_sector,
+            disabled=not filter_state.selected_sector,
         )
-        show_sectores = cols[2].toggle(
+        filter_state.show_sectores = cols[2].toggle(
             "Mostrar sector(es) seleccionados",
             value=False,
-            disabled=not selected_sector,
+            disabled=not filter_state.selected_sector,
         )
 
-    query = build_product_query(
-        year=year,
-        show_rentabilidad_anios=show_rentabilidad_anios,
-        show_rentabilidad_media_135=show_rentabilidad_media_135,
-        show_volatilidad=show_volatilidad,
-        show_dias_desplazamiento=show_dias_desplazamiento,
-        show_categories=show_categories,
-        show_sectores=show_sectores,
-        selected_sector=selected_sector,
-        threshold_sector=threshold_sector,
-        filter_name=filter_name,
-        selected_filter_sql=FILTROS_RAPIDOS[selected_filter],
-        selected_divisa=selected_divisa,
-        selected_zona=selected_zona,
-        selected_producto=selected_producto,
-        selected_categoria=selected_categoria,
-        selected_categoria_mstar=selected_categoria_mstar,
-        selected_categoria_myinvestor=selected_categoria_myinvestor,
-        selected_gestora=selected_gestora,
-        selected_tipo_activo=selected_tipo_activo,
-    )
+    query = build_product_query(filter_state)
 
     with st.expander("Consulta SQL"):
         st.code(query)
