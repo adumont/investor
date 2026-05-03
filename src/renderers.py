@@ -33,7 +33,8 @@ def format_percent_from_decimal(value):
 
 def render_comisiones(producto):
     if not producto or "listaComisiones" not in producto:
-        return "No hay información de comisiones disponible."
+        st.markdown("No hay información de comisiones disponible.")
+        return
     comisiones = producto["listaComisiones"]
     comisiones = sorted(
         comisiones, key=lambda x: to_float(x["porcentaje"]), reverse=True
