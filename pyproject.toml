@@ -1,0 +1,16 @@
+[project]
+name = "investor"
+version = "0.1.0"
+description = "Streamlit app for exploring MyInvestor investment products with MIX advisor"
+requires-python = ">=3.11"
+dependencies = [
+    "streamlit",
+    "pandas",
+    "duckdb",
+    "dotenv",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+]

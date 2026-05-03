@@ -27,21 +27,19 @@ Deployed: https://investor26.streamlit.app/
 ## Commands
 
 ```
-python -m streamlit run app.py
+uv run streamlit run app.py
 ```
 
 **NEVER** launch streamlit to test (`.venv\Scripts\streamlit run app.py ...`). Hangs terminal, never exits.
-Lint: `.venv\Scripts\ruff check --fix .`
-Format: `.venv\Scripts\ruff format .`
+Lint: `uv run ruff check --fix .`
+Format: `uv run ruff format .`
 Run both before commits. No obvious errors pushed.
-
-`.venv/` exists. Activate before running.
 
 ## Dependencies
 
-`requirements.txt`: streamlit, pandas, duckdb, dotenv, pip-tools, ruff.
+`pyproject.toml`: streamlit, pandas, duckdb, dotenv. Dev: ruff.
 
-`pip-tools` present but no `requirements.in`. Ignore pip-compile workflow.
+Manage with `uv`: `uv sync`, `uv add <pkg>`, `uv run <cmd>`.
 
 ## Data flow
 

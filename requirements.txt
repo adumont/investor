@@ -1,6 +1,0 @@
-streamlit
-pandas
-duckdb
-dotenv
-pip-tools
-ruff
