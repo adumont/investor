@@ -32,6 +32,7 @@ python -m streamlit run app.py
 
 **NEVER** launch streamlit to test (`.venv\Scripts\streamlit run app.py ...`). Hangs terminal, never exits.
 Use `.venv\Scripts\python -m py_compile <file>.py` for syntax checks.
+Always check syntax before ending change.
 
 No tests. No lint. No typecheck. No formatter configured.
 
