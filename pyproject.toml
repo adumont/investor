@@ -31,4 +31,4 @@ omit = ["src/__init__.py"]
 
 [tool.coverage.report]
 show_missing = true
-fail_under = 40
+fail_under = 60

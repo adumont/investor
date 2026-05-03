@@ -1,3 +1,9 @@
+import sys
+from pathlib import Path
+
+# Ensure src/ is in path for imports when run via AppTest
+sys.path.insert(0, str(Path(__file__).parent))
+
 import streamlit as st
 import duckdb
 import pandas as pd
