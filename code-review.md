@@ -391,17 +391,17 @@ The function checks `"Cualquiera" in options`, but multiselect widgets don't inc
 
 **Remediation:** Use `Literal["max", "min"]` type hint and validate.
 
-### 6.8 `explicabilidad.py` uses `anos`/`mas` without accent — P2
+### 6.8 `explicabilidad.py` uses `anos`/`mas` without accent — P2 ✅ Fixed
 
 **File:** `explicabilidad.py:19`
 
 ```
-"Horizonte solicitado: {horizon} anos. Regla aplicada: horizonte inferior mas cercano"
+"Horizonte solicitado: {horizon} años. Regla aplicada: horizonte inferior más cercano"
 ```
 
 Missing accents (`años`, `más`). Minor, but inconsistent with the rest of the Spanish UI.
 
-**Remediation:** Fix to `años`, `más`.
+**Status:** Fixed. Changed `anos` → `años`, `mas` → `más` in `explicabilidad.py`. Tests updated to match.
 
 ---
 
