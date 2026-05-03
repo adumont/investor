@@ -74,19 +74,112 @@ Manage with `uv`: `uv sync`, `uv add <pkg>`, `uv run <cmd>`.
 
 ## Testing
 
-Framework: pytest. Config in `pyproject.toml`.
+Framework: pytest + pytest-cov. Config in `pyproject.toml`.
 Tests: `tests/`. Fixtures in `tests/conftest.py`.
 
-| File | Tests |
-|---|---|
-| `tests/test_recommendador.py` | `_to_float`, `_nearest_lower_horizon`, `_build_candidate`, correlation, volatility, `recommend_mix` |
-| `tests/test_queries.py` | SQL generation: filters, sectors, name search |
-| `tests/test_productos.py` | JSON read, DataFrame build, option extraction, download mock |
+### Test structure
 
-Run: `uv run pytest tests/ -v`
+| File | Tests | Coverage |
+|---|---|---|
+| `tests/test_recommendador.py` | `_to_float`, `_nearest_lower_horizon`, `_build_candidate`, correlation, volatility, `recommend_mix` | 96% |
+| `tests/test_queries.py` | SQL generation: filters, sectors, name search | 100% |
+| `tests/test_productos.py` | JSON read, DataFrame build, option extraction, download mock | 100% |
+| `tests/test_app.py` | Streamlit UI: AppTest, mocks, session state | 63% |
+| `tests/test_simulacion.py` | Scenario simulation, historical proxy paths | 97% |
+| `tests/test_explicabilidad.py` | Human-readable rationale output | 100% |
 
-### Adding tests
-- Mock `get_productos()` to avoid API calls.
-- Test `src/recommendador.py` logic: parser, feasibility, score fallback.
-- Use `data/myinvestor.json` as fixture data.
-- `ADVISOR.md` §Extension Path lists desired test coverage areas.
+### Running tests
+
+```bash
+uv run pytest tests/ -v                    # run all tests
+uv run pytest tests/test_app.py -v         # run specific file
+uv run pytest tests/ --cov=src --cov-report=term-missing  # with coverage
+```
+
+### Coverage config (pyproject.toml)
+
+```toml
+[tool.pytest.ini_options]
+addopts = "--cov=src --cov-report=term-missing --cov-fail-under=60"
+```
+
+Current coverage: **73%** (96 tests, 627 statements, 168 missed).
+
+### Streamlit UI tests (AppTest)
+
+Use `streamlit.testing` AppTest for UI testing:
+
+```python
+from streamlit.testing.v1 import AppTest
+
+def test_something():
+    at = AppTest.from_file("src/app.py")
+    at.run()
+    assert at.session_state["key"] == "value"
+    at.button[0].click().run()
+    assert at.markdown[0].value == "Expected"
+```
+
+Key patterns:
+- `at.run()` - simulate script rerun
+- `at.session_state` - access session state
+- `at.button[i].click()` - simulate widget interaction
+- `at.markdown[i].value` - assert rendered output
+- `at.error` / `at.warning` / `at.success` - check messages
+
+### Mocking
+
+Mock external dependencies to avoid API calls:
+
+```python
+from unittest.mock import patch, MagicMock
+
+def test_with_mock():
+    mock_data = [...]  # fixture data
+    with patch("src.app.get_productos") as mock:
+        mock.return_value = ("timestamp", mock_data)
+        # run test
+```
+
+Common mocks:
+- `get_productos()` → return `(timestamp, data)` from `data/myinvestor.json`
+- `requests.get()` → return mock Response
+- `streamlit.cache_data` → disable or mock return
+
+### Fixtures (conftest.py)
+
+```python
+import json
+import pytest
+
+@pytest.fixture
+def productos_json():
+    with open("data/myinvestor.json", encoding="utf-8") as f:
+        return json.load(f)
+
+@pytest.fixture
+def productos_df(productos_json):
+    return pd.DataFrame(productos_json)
+```
+
+### Adding tests for new code
+
+1. **Pure functions** (`recommendador.py`, `queries.py`, `simulacion.py`):
+   - Test inputs → expected outputs directly
+   - No mocks needed
+   - Use `data/myinvestor.json` as fixture
+
+2. **Streamlit UI** (`app.py`):
+   - Use AppTest
+   - Mock data sources (`get_productos`)
+   - Simulate widget interactions
+   - Assert rendered output
+
+3. **API calls** (`productos.py`):
+   - Mock `requests.get()` with `unittest.mock.patch`
+   - Test both success and failure paths
+   - Verify fallback to local file
+
+4. **Coverage gaps** (see `ADVISOR.md` §Extension Path):
+   - `app.py` (63%) - add more AppTest scenarios
+   - `renderers.py` (12%) - hard to unit test, consider integration tests
