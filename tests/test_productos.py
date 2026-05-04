@@ -39,7 +39,7 @@ class TestGetListasOpciones:
 
         df = get_df_productos(myinvestor_data)
         result = _extract_options(df)
-        assert len(result) == 9
+        assert len(result) == 10
         divisas, zonas, tipos, *rest = result
         assert "EUR" in divisas
         assert len(zonas) > 0
@@ -58,6 +58,7 @@ class TestGetListasOpciones:
                 "categoriaMstar": [None, "Mstar"],
                 "entidadGestora": [None, "Manager"],
                 "listaSectores": [None, None],
+                "datosFondo": [None, {"tipoPerfilPlanEnum": "CONSERVADOR"}],
             }
         )
         result = _extract_options(df)
@@ -72,6 +73,29 @@ class TestGetListasOpciones:
         result = _extract_options(df)
         for options in result:
             assert options == sorted(options, key=lambda s: str(s).strip().casefold())
+
+    def test_9_tuple_backward_compat(self):
+        """Ensure _extract_options always returns 10-tuple even when datosFondo has no perfil."""
+        from src.productos import _extract_options
+
+        df = pd.DataFrame(
+            {
+                "divisasDto": [None, {"codigo": "EUR"}],
+                "tipoProductoEnum": ["FONDOS_INDEXADOS", "FONDOS_INDEXADOS"],
+                "zonaGeografica": [None, "Global"],
+                "tipoActivo": [None, "Renta Variable"],
+                "categoria": [None, "Cat"],
+                "categoriaMyInvestor": [None, "Otros"],
+                "categoriaMstar": [None, "Mstar"],
+                "entidadGestora": [None, "Manager"],
+                "listaSectores": [None, None],
+                "datosFondo": [None, None],
+            }
+        )
+        result = _extract_options(df)
+        assert len(result) == 10
+        perfiles = result[9]
+        assert len(perfiles) == 0
 
 
 class TestDownloadJsonFromUrl:
@@ -97,16 +121,14 @@ class TestGetProductos:
     def test_api_failure_fallback(self, mock_requests):
         from src.productos import get_productos
 
-        # Clear cache to ensure fresh execution
         try:
             get_productos.clear()
         except Exception:
             pass
 
-        # Make API fail
         mock_requests.get.side_effect = Exception("Network error")
 
         result = get_productos()
         assert result is not None
         assert len(result) == 2
-        assert len(result[1]) > 0  # Should fallback to local file
+        assert len(result[1]) > 0

@@ -86,6 +86,19 @@ def _extract_options(df) -> tuple:
     CATEGORIAS_MSTAR = _unique_map["categoriaMstar"]
     GESTORAS = _unique_map["entidadGestora"]
 
+    PERFILES = (
+        df["datosFondo"]
+        .apply(
+            lambda x: (
+                x.get("tipoPerfilPlanEnum")
+                if isinstance(x, dict) and x.get("tipoPerfilPlanEnum")
+                else None
+            )
+        )
+        .dropna()
+        .unique()
+    )
+
     SECTORES = set()
     for sector_list in df["listaSectores"].dropna():
         if isinstance(sector_list, list):
@@ -107,6 +120,7 @@ def _extract_options(df) -> tuple:
                 GESTORAS,
                 SECTORES,
                 TIPO_ACTIVO,
+                PERFILES,
             ),
         )
     )

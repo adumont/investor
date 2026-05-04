@@ -24,6 +24,8 @@ class FilterState:
     selected_categoria_myinvestor: list[str] = field(default_factory=list)
     selected_gestora: list[str] = field(default_factory=list)
     selected_tipo_activo: list[str] = field(default_factory=list)
+    selected_perfil: list[str] = field(default_factory=list)
+    show_perfil: bool = False
 
 
 def get_filtro_sql(field: str, options: list[str]):
@@ -103,10 +105,11 @@ def build_product_query(f: FilterState) -> str:
         {"" if f.show_volatilidad else "-- "}volatilidadYearTres as "Vol 3Y",
         {"" if f.show_volatilidad else "-- "}volatilidadYearCinco as "Vol 5Y",
         {"" if f.show_dias_desplazamiento else "-- "}diasDesplazamientoSuscripcion DiasS, diasDesplazamientoReembolso DiasR,
-        {"" if f.show_categories else "-- "}categoria, categoriaMyInvestor, categoriaMstar,
-        trackingErrorYearUno as TE_1Y,
-        entidadGestora as Gestora,
-        divisasDto.codigo AS divisa
+         {"" if f.show_categories else "-- "}categoria, categoriaMyInvestor, categoriaMstar,
+         trackingErrorYearUno as TE_1Y,
+         entidadGestora as Gestora,
+         divisasDto.codigo AS divisa,
+         {"" if f.show_perfil else "-- "}datosFondo.tipoPerfilPlanEnum AS "Perfil"
         {("," + _sector_cols) if _sector_cols else ""}
     FROM df_productos
         {"LEFT JOIN UNNEST(listaSectores) AS t(s) ON TRUE" if _use_unnest else ""}
@@ -120,9 +123,10 @@ def build_product_query(f: FilterState) -> str:
         AND ( {get_filtro_sql("categoriaMstar", f.selected_categoria_mstar)} ) -- filtro categoria Morningstar
         AND ( {get_filtro_sql("categoriaMyInvestor", f.selected_categoria_myinvestor)} ) -- filtro categoria MyInvestor
         AND ( {get_filtro_sql("entidadGestora", f.selected_gestora)} ) -- filtro gestora
-        AND ( {get_filtro_sql("tipoActivo", f.selected_tipo_activo)} ) -- filtro tipo de activo
-        AND ( {get_filtro_sector_sql(f.selected_sector, f.threshold_sector)} ) -- filtro sector
-        AND status = 'OPEN'
+         AND ( {get_filtro_sql("tipoActivo", f.selected_tipo_activo)} ) -- filtro tipo de activo
+         AND ( {get_filtro_sql("datosFondo.tipoPerfilPlanEnum", f.selected_perfil)} ) -- filtro perfil
+         AND ( {get_filtro_sector_sql(f.selected_sector, f.threshold_sector)} ) -- filtro sector
+         AND status = 'OPEN'
     {"GROUP BY codigoIsin, nombre, indicadorRiesgo, ter, ytd, rentabilidadPasadaUno, rentabilidadPasadaDos, rentabilidadPasadaTres, rentabilidadPasadaCuatro, rentabilidadPasadaCinco, yearUno, yearTres, yearCinco, volatilidadYearUno, volatilidadYearTres, volatilidadYearCinco, diasDesplazamientoSuscripcion, diasDesplazamientoReembolso, categoria, categoriaMyInvestor, categoriaMstar, trackingErrorYearUno, entidadGestora, divisasDto" if _use_unnest else ""}
     ORDER BY ter ASC, indicadorRiesgo ASC, codigoIsin ASC
     """

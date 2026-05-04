@@ -75,17 +75,34 @@ data = init_app_data()
 timestamp_products = data["timestamp_products"]
 productos_lista = data["productos_lista"]
 df_productos = data["df_productos"]
-(
-    DIVISAS,
-    ZONAS,
-    TIPOS_PRODUCTO,
-    CATEGORIAS,
-    CATEGORIAS_MYINVESTOR,
-    CATEGORIAS_MSTAR,
-    GESTORAS,
-    SECTORES,
-    TIPO_ACTIVO,
-) = data["options"]
+options = data["options"]
+if len(options) == 9:
+    # Backward compat: cached result without PERFILES
+    (
+        DIVISAS,
+        ZONAS,
+        TIPOS_PRODUCTO,
+        CATEGORIAS,
+        CATEGORIAS_MYINVESTOR,
+        CATEGORIAS_MSTAR,
+        GESTORAS,
+        SECTORES,
+        TIPO_ACTIVO,
+    ) = options
+    PERFILES = []
+else:
+    (
+        DIVISAS,
+        ZONAS,
+        TIPOS_PRODUCTO,
+        CATEGORIAS,
+        CATEGORIAS_MYINVESTOR,
+        CATEGORIAS_MSTAR,
+        GESTORAS,
+        SECTORES,
+        TIPO_ACTIVO,
+        PERFILES,
+    ) = options
 
 year = date.today().year
 
@@ -140,6 +157,10 @@ with st.expander("Más filtros & Selección de columnas", expanded=False):
             "Filtro por categoría MyInvestor",
             options=list(CATEGORIAS_MYINVESTOR),
         )
+        filter_state.selected_perfil = cols[1].multiselect(
+            "Tipo de Perfil",
+            options=list(PERFILES),
+        )
         filter_state.selected_categoria_mstar = cols[2].multiselect(
             "Filtro por categoría Morningstar", options=list(CATEGORIAS_MSTAR)
         )
@@ -156,6 +177,7 @@ with st.expander("Más filtros & Selección de columnas", expanded=False):
             "Mostrar rentabilidad media a 1,3,5 años", value=True
         )
         filter_state.show_categories = cols[1].toggle("Mostrar categorias", value=False)
+        filter_state.show_perfil = cols[1].toggle("Mostrar Perfil", value=False)
         filter_state.show_volatilidad = cols[2].toggle(
             "Mostrar datos Volatilidad", value=False
         )
