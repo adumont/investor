@@ -122,6 +122,19 @@ def render_general_info(producto):
         st.subheader(
             f"{producto.get('nombre', 'Producto')} :orange-badge[{producto.get('codigoIsin', 'ISIN N/D')}] :violet-badge[{producto.get('tipoActivo', 'N/A')}]"
         )
+        valor = producto.get("valorLiquidativo")
+        fecha = producto.get("fechaValorLiquidativo", "")
+        if valor is not None:
+            valor_str = f"{float(valor):.3f} €"
+            if fecha:
+                from datetime import datetime
+
+                fecha_dt = datetime.fromisoformat(str(fecha).replace("Z", "+00:00"))
+                fecha_str = fecha_dt.strftime("%d/%m")
+                label = f"Valor Liquidativo ({fecha_str})"
+            else:
+                label = "Valor Liquidativo"
+            st.metric(label, valor_str)
         st.metric(
             "Indicador de riesgo", format_text(datos_fondo.get("indicadorRiesgo"))
         )

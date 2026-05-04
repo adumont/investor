@@ -80,6 +80,8 @@ def sample_producto():
         "volatilidadYearUno": "12.0",
         "volatilidadYearTres": "15.0",
         "volatilidadYearCinco": "18.0",
+        "valorLiquidativo": 12.6231,
+        "fechaValorLiquidativo": "2026-04-22T00:00:00Z",
     }
 
 
@@ -275,7 +277,19 @@ class TestRenderGeneralInfo:
 
         render_general_info(sample_producto)
         mock_st.subheader.assert_called()
-        mock_st.metric.assert_called_once()
+        assert mock_st.metric.call_count == 2
+        metric_labels = [call.args[0] for call in mock_st.metric.call_args_list]
+        assert any("Valor Liquidativo" in label for label in metric_labels)
+        assert "Indicador de riesgo" in metric_labels
+        # Check value contains formatted price
+        vl_call = [
+            c for c in mock_st.metric.call_args_list if "Valor Liquidativo" in c.args[0]
+        ][0]
+        assert "12.623" in str(vl_call.args[1])
+        assert "€" in str(vl_call.args[1])
+        # Check label contains formatted date
+        vl_label = [label for label in metric_labels if "Valor Liquidativo" in label][0]
+        assert "22/04" in vl_label
 
     def test_no_descripcion(self, mock_st, sample_producto):
         from src.renderers import render_general_info
