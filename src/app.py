@@ -58,51 +58,20 @@ FILTROS_RAPIDOS = {
 }
 
 
-@st.cache_resource
-def init_app_data():
-    timestamp_products, productos_lista = get_productos()
-    df_productos = get_df_productos(productos_lista)
-    options = get_listas_opciones(df_productos, timestamp_products)
-    return {
-        "timestamp_products": timestamp_products,
-        "productos_lista": productos_lista,
-        "df_productos": df_productos,
-        "options": options,
-    }
-
-
-data = init_app_data()
-timestamp_products = data["timestamp_products"]
-productos_lista = data["productos_lista"]
-df_productos = data["df_productos"]
-options = data["options"]
-if len(options) == 9:
-    # Backward compat: cached result without PERFILES
-    (
-        DIVISAS,
-        ZONAS,
-        TIPOS_PRODUCTO,
-        CATEGORIAS,
-        CATEGORIAS_MYINVESTOR,
-        CATEGORIAS_MSTAR,
-        GESTORAS,
-        SECTORES,
-        TIPO_ACTIVO,
-    ) = options
-    PERFILES = []
-else:
-    (
-        DIVISAS,
-        ZONAS,
-        TIPOS_PRODUCTO,
-        CATEGORIAS,
-        CATEGORIAS_MYINVESTOR,
-        CATEGORIAS_MSTAR,
-        GESTORAS,
-        SECTORES,
-        TIPO_ACTIVO,
-        PERFILES,
-    ) = options
+timestamp_products, productos_lista = get_productos()
+df_productos = get_df_productos(productos_lista)
+(
+    DIVISAS,
+    ZONAS,
+    TIPOS_PRODUCTO,
+    CATEGORIAS,
+    CATEGORIAS_MYINVESTOR,
+    CATEGORIAS_MSTAR,
+    GESTORAS,
+    SECTORES,
+    TIPO_ACTIVO,
+    PERFILES,
+) = get_listas_opciones(df_productos, timestamp_products)
 
 year = date.today().year
 
