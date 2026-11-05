@@ -185,6 +185,7 @@ def render_general_info_tabla(producto):
         ("Categoría Morningstar", format_text(producto.get("categoriaMstar"))),
         ("Zona geográfica", format_text(producto.get("zonaGeografica"))),
         ("Tipo de producto", format_text(producto.get("tipoProductoEnum"))),
+        ("Estado", format_text(producto.get("status"))),
         ("Perfil del plan", format_text(datos_fondo.get("tipoPerfilPlanEnum"))),
         ("Entidad gestora", format_text(datos_fondo.get("entidadGestora"))),
         ("Entidad depositaria", format_text(datos_fondo.get("entidadDepositaria"))),
