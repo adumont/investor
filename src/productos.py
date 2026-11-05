@@ -70,6 +70,8 @@ def _extract_options(df) -> tuple:
 
     TIPOS_PRODUCTO = df["tipoProductoEnum"].dropna().unique()
 
+    ESTADOS = df["status"].dropna().unique() if "status" in df.columns else []
+
     _STR_COLS = [
         "zonaGeografica",
         "tipoActivo",
@@ -121,6 +123,7 @@ def _extract_options(df) -> tuple:
                 SECTORES,
                 TIPO_ACTIVO,
                 PERFILES,
+                ESTADOS,
             ),
         )
     )

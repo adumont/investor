@@ -39,7 +39,7 @@ class TestGetListasOpciones:
 
         df = get_df_productos(myinvestor_data)
         result = _extract_options(df)
-        assert len(result) == 10
+        assert len(result) == 11
         divisas, zonas, tipos, *rest = result
         assert "EUR" in divisas
         assert len(zonas) > 0
@@ -75,7 +75,7 @@ class TestGetListasOpciones:
             assert options == sorted(options, key=lambda s: str(s).strip().casefold())
 
     def test_9_tuple_backward_compat(self):
-        """Ensure _extract_options always returns 10-tuple even when datosFondo has no perfil."""
+        """Ensure _extract_options always returns 11-tuple even when datosFondo has no perfil."""
         from src.productos import _extract_options
 
         df = pd.DataFrame(
@@ -93,7 +93,7 @@ class TestGetListasOpciones:
             }
         )
         result = _extract_options(df)
-        assert len(result) == 10
+        assert len(result) == 11
         perfiles = result[9]
         assert len(perfiles) == 0
 

@@ -71,6 +71,7 @@ df_productos = get_df_productos(productos_lista)
     SECTORES,
     TIPO_ACTIVO,
     PERFILES,
+    ESTADOS,
 ) = get_listas_opciones(df_productos, timestamp_products)
 
 year = date.today().year
@@ -132,6 +133,9 @@ with st.expander("Más filtros & Selección de columnas", expanded=False):
         )
         filter_state.selected_categoria_mstar = cols[2].multiselect(
             "Filtro por categoría Morningstar", options=list(CATEGORIAS_MSTAR)
+        )
+        filter_state.selected_status = cols[2].multiselect(
+            "Filtro por estado", options=list(ESTADOS), default=["OPEN"]
         )
         filter_state.selected_zona = cols[3].multiselect(
             "Filtro por zona geográfica", options=list(ZONAS)

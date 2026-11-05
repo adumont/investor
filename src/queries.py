@@ -25,6 +25,7 @@ class FilterState:
     selected_gestora: list[str] = field(default_factory=list)
     selected_tipo_activo: list[str] = field(default_factory=list)
     selected_perfil: list[str] = field(default_factory=list)
+    selected_status: list[str] = field(default_factory=lambda: ["OPEN"])
     show_perfil: bool = False
 
 
@@ -126,7 +127,7 @@ def build_product_query(f: FilterState) -> str:
          AND ( {get_filtro_sql("tipoActivo", f.selected_tipo_activo)} ) -- filtro tipo de activo
          AND ( {get_filtro_sql("datosFondo.tipoPerfilPlanEnum", f.selected_perfil)} ) -- filtro perfil
          AND ( {get_filtro_sector_sql(f.selected_sector, f.threshold_sector)} ) -- filtro sector
-         AND status = 'OPEN'
+         AND ( {get_filtro_sql("status", f.selected_status)} ) -- filtro estado
     {"GROUP BY codigoIsin, nombre, indicadorRiesgo, ter, ytd, rentabilidadPasadaUno, rentabilidadPasadaDos, rentabilidadPasadaTres, rentabilidadPasadaCuatro, rentabilidadPasadaCinco, yearUno, yearTres, yearCinco, volatilidadYearUno, volatilidadYearTres, volatilidadYearCinco, diasDesplazamientoSuscripcion, diasDesplazamientoReembolso, categoria, categoriaMyInvestor, categoriaMstar, trackingErrorYearUno, entidadGestora, divisasDto" if _use_unnest else ""}
     ORDER BY ter ASC, indicadorRiesgo ASC, codigoIsin ASC
     """
