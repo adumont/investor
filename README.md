@@ -61,7 +61,9 @@ En el bloque "Más filtros & Selección de columnas" puedes filtrar por:
 - categoría MyInvestor,
 - categoría Morningstar,
 - tipo de activo,
+- tipo de perfil,
 - zona geográfica,
+- estado (`OPEN`, `SOFT_CLOSED`, `CLOSED`),
 - sector.
 
 El filtro por sector permite definir un umbral mínimo en porcentaje (por ejemplo, mostrar solo productos con al menos 20% en un sector concreto).
@@ -80,7 +82,7 @@ Además, la tabla incluye `TE_1Y`, que corresponde al tracking error a 1 año (`
 
 ### 6. Tabla de resultados y ordenación
 
-- Los resultados muestran solo productos con estado OPEN.
+- El filtro de estado permite elegir uno o varios valores; por defecto solo se muestran productos `OPEN`.
 - La ordenación principal es por riesgo y después por TER.
 - La selección es por fila única para abrir el detalle del producto.
 - Si queda un único resultado, el detalle se abre automáticamente.
@@ -93,7 +95,7 @@ Al seleccionar un producto, se muestra una ficha completa con:
 - descripción (si está disponible),
 - enlaces a documentos (ficha técnica, KIID, informe semestral, memoria, Morningstar),
 - gráficos de rentabilidad histórica,
-- tabla de datos generales,
+- tabla de datos generales (incluye el estado del producto),
 - tabla de comisiones con TER destacado,
 - desglose por sectores,
 - desglose por regiones,
